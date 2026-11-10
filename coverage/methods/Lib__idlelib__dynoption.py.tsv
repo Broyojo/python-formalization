@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/dynoption.py	12	17	DynOptionMenu.__init__	__init__(self, master, variable, value, *values, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/dynoption.py	19	30	DynOptionMenu.SetMenu	SetMenu(self, valueList, value=None)	excluded		platform: GUI toolkit
-Lib/idlelib/dynoption.py	33	51	_dyn_option_menu	_dyn_option_menu(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/dynoption.py	12	17	DynOptionMenu.__init__	__init__(self, master, variable, value, *values, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/dynoption.py	19	30	DynOptionMenu.SetMenu	SetMenu(self, valueList, value=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/dynoption.py	33	51	_dyn_option_menu	_dyn_option_menu(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

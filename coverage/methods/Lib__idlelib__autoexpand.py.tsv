@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/autoexpand.py	22	25	AutoExpand.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
-Lib/idlelib/autoexpand.py	27	52	AutoExpand.expand_word_event	expand_word_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/autoexpand.py	54	83	AutoExpand.getwords	getwords(self)	excluded		platform: GUI toolkit
-Lib/idlelib/autoexpand.py	85	91	AutoExpand.getprevword	getprevword(self)	excluded		platform: GUI toolkit
+Lib/idlelib/autoexpand.py	22	25	AutoExpand.__init__	__init__(self, editwin)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/autoexpand.py	27	52	AutoExpand.expand_word_event	expand_word_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/autoexpand.py	54	83	AutoExpand.getwords	getwords(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/autoexpand.py	85	91	AutoExpand.getprevword	getprevword(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

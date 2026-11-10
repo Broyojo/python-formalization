@@ -1,21 +1,21 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/colorizer.py	17	19	any	any(name, alternates)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	22	78	make_pat	make_pat()	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	93	95	matched_named_groups	matched_named_groups(re_match)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	98	116	color_config	color_config(text)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	135	140	ColorDelegator.__init__	__init__(self)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	142	147	ColorDelegator.init_state	init_state(self)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	149	170	ColorDelegator.setdelegate	setdelegate(self, delegate)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	172	176	ColorDelegator.config_colors	config_colors(self)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	178	196	ColorDelegator.LoadTagDefs	LoadTagDefs(self)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	198	202	ColorDelegator.insert	insert(self, index, chars, tags=None)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	204	208	ColorDelegator.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	210	222	ColorDelegator.notify_range	notify_range(self, index1, index2=None)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	224	231	ColorDelegator.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	233	255	ColorDelegator.toggle_colorize_event	toggle_colorize_event(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	257	289	ColorDelegator.recolorize	recolorize(self)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	291	333	ColorDelegator.recolorize_main	recolorize_main(self)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	335	350	ColorDelegator._add_tag	_add_tag(self, start, end, head, matched_group_name)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	352	390	ColorDelegator._add_tags_in_section	_add_tags_in_section(self, chars, head)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	392	395	ColorDelegator.removecolors	removecolors(self)	excluded		platform: GUI toolkit
-Lib/idlelib/colorizer.py	398	416	_color_delegator	_color_delegator(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	17	19	any	any(name, alternates)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	22	78	make_pat	make_pat()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	93	95	matched_named_groups	matched_named_groups(re_match)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	98	116	color_config	color_config(text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	135	140	ColorDelegator.__init__	__init__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	142	147	ColorDelegator.init_state	init_state(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	149	170	ColorDelegator.setdelegate	setdelegate(self, delegate)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	172	176	ColorDelegator.config_colors	config_colors(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	178	196	ColorDelegator.LoadTagDefs	LoadTagDefs(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	198	202	ColorDelegator.insert	insert(self, index, chars, tags=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	204	208	ColorDelegator.delete	delete(self, index1, index2=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	210	222	ColorDelegator.notify_range	notify_range(self, index1, index2=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	224	231	ColorDelegator.close	close(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	233	255	ColorDelegator.toggle_colorize_event	toggle_colorize_event(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	257	289	ColorDelegator.recolorize	recolorize(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	291	333	ColorDelegator.recolorize_main	recolorize_main(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	335	350	ColorDelegator._add_tag	_add_tag(self, start, end, head, matched_group_name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	352	390	ColorDelegator._add_tags_in_section	_add_tags_in_section(self, chars, head)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	392	395	ColorDelegator.removecolors	removecolors(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/colorizer.py	398	416	_color_delegator	_color_delegator(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

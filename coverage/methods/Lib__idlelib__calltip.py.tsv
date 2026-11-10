@@ -1,12 +1,12 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/calltip.py	20	27	Calltip.__init__	__init__(self, editwin=None)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	29	30	Calltip.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	32	34	Calltip._make_tk_calltip_window	_make_tk_calltip_window(self)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	36	39	Calltip.remove_calltip_window	remove_calltip_window(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	41	44	Calltip.force_open_calltip_event	force_open_calltip_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	46	51	Calltip.try_open_calltip_event	try_open_calltip_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	53	55	Calltip.refresh_calltip_event	refresh_calltip_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	57	106	Calltip.open_calltip	open_calltip(self, evalfuncs)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	108	130	Calltip.fetch_tip	fetch_tip(self, expression)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	133	144	get_entity	get_entity(expression)	excluded		platform: GUI toolkit
-Lib/idlelib/calltip.py	154	200	get_argspec	get_argspec(ob)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip.py	20	27	Calltip.__init__	__init__(self, editwin=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	29	30	Calltip.close	close(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	32	34	Calltip._make_tk_calltip_window	_make_tk_calltip_window(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	36	39	Calltip.remove_calltip_window	remove_calltip_window(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	41	44	Calltip.force_open_calltip_event	force_open_calltip_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	46	51	Calltip.try_open_calltip_event	try_open_calltip_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	53	55	Calltip.refresh_calltip_event	refresh_calltip_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	57	106	Calltip.open_calltip	open_calltip(self, evalfuncs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	108	130	Calltip.fetch_tip	fetch_tip(self, expression)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	133	144	get_entity	get_entity(expression)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/calltip.py	154	200	get_argspec	get_argspec(ob)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

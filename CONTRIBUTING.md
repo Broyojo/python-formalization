@@ -1,6 +1,6 @@
 # Contributing
 
-Help is welcome, whether you run your own agents or write Lean by hand. About 16% of the in-scope functions of CPython 3.15.2 are modelled and reviewed so far; the rest is open.
+Help is welcome, whether you run your own agents or write Lean by hand. About 14% of the in-scope functions of CPython 3.15.2 are modelled and reviewed so far; the rest is open.
 
 ## Ways to help
 

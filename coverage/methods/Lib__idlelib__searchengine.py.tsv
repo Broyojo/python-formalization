@@ -1,20 +1,20 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/searchengine.py	7	16	get	get(root)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	22	34	SearchEngine.__init__	__init__(self, root)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	38	39	SearchEngine.getpat	getpat(self)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	41	42	SearchEngine.setpat	setpat(self, pat)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	44	45	SearchEngine.isre	isre(self)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	47	48	SearchEngine.iscase	iscase(self)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	50	51	SearchEngine.isword	isword(self)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	53	54	SearchEngine.iswrap	iswrap(self)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	56	57	SearchEngine.isback	isback(self)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	61	66	SearchEngine.setcookedpat	setcookedpat(self, pat)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	68	74	SearchEngine.getcookedpat	getcookedpat(self)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	76	101	SearchEngine.getprog	getprog(self)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	103	116	SearchEngine.report_error	report_error(self, pat, msg, col=None)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	118	156	SearchEngine.search_text	search_text(self, text, prog=None, ok=0)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	158	178	SearchEngine.search_forward	search_forward(self, text, prog, line, col, wrap, ok=0)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	180	202	SearchEngine.search_backward	search_backward(self, text, prog, line, col, wrap, ok=0)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	205	226	search_reverse	search_reverse(prog, chars, col)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	228	240	get_selection	get_selection(text)	excluded		platform: GUI toolkit
-Lib/idlelib/searchengine.py	242	245	get_line_col	get_line_col(index)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	7	16	get	get(root)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	22	34	SearchEngine.__init__	__init__(self, root)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	38	39	SearchEngine.getpat	getpat(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	41	42	SearchEngine.setpat	setpat(self, pat)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	44	45	SearchEngine.isre	isre(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	47	48	SearchEngine.iscase	iscase(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	50	51	SearchEngine.isword	isword(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	53	54	SearchEngine.iswrap	iswrap(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	56	57	SearchEngine.isback	isback(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	61	66	SearchEngine.setcookedpat	setcookedpat(self, pat)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	68	74	SearchEngine.getcookedpat	getcookedpat(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	76	101	SearchEngine.getprog	getprog(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	103	116	SearchEngine.report_error	report_error(self, pat, msg, col=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	118	156	SearchEngine.search_text	search_text(self, text, prog=None, ok=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	158	178	SearchEngine.search_forward	search_forward(self, text, prog, line, col, wrap, ok=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	180	202	SearchEngine.search_backward	search_backward(self, text, prog, line, col, wrap, ok=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	205	226	search_reverse	search_reverse(prog, chars, col)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	228	240	get_selection	get_selection(text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/searchengine.py	242	245	get_line_col	get_line_col(index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

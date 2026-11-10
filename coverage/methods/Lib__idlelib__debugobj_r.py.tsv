@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/debugobj_r.py	3	7	remote_object_tree_item	remote_object_tree_item(item)	excluded		platform: GUI toolkit
-Lib/idlelib/debugobj_r.py	12	13	WrappedObjectTreeItem.__init__	__init__(self, item)	excluded		platform: GUI toolkit
-Lib/idlelib/debugobj_r.py	15	17	WrappedObjectTreeItem.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/debugobj_r.py	19	21	WrappedObjectTreeItem._GetSubList	_GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugobj_r.py	26	28	StubObjectTreeItem.__init__	__init__(self, sockio, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/debugobj_r.py	30	32	StubObjectTreeItem.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/debugobj_r.py	34	36	StubObjectTreeItem._GetSubList	_GetSubList(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj_r.py	3	7	remote_object_tree_item	remote_object_tree_item(item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugobj_r.py	12	13	WrappedObjectTreeItem.__init__	__init__(self, item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugobj_r.py	15	17	WrappedObjectTreeItem.__getattr__	__getattr__(self, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugobj_r.py	19	21	WrappedObjectTreeItem._GetSubList	_GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugobj_r.py	26	28	StubObjectTreeItem.__init__	__init__(self, sockio, oid)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugobj_r.py	30	32	StubObjectTreeItem.__getattr__	__getattr__(self, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugobj_r.py	34	36	StubObjectTreeItem._GetSubList	_GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

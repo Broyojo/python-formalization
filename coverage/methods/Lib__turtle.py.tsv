@@ -1,223 +1,223 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtle.py	105	132	config_dict	config_dict(filename)	excluded		platform: GUI toolkit
-Lib/turtle.py	134	162	readconfig	readconfig(cfgdict)	excluded		platform: GUI toolkit
-Lib/turtle.py	184	185	Vec2D.__new__	__new__(cls, x, y)	excluded		platform: GUI toolkit
-Lib/turtle.py	187	188	Vec2D.__add__	__add__(self, other)	excluded		platform: GUI toolkit
-Lib/turtle.py	190	193	Vec2D.__mul__	__mul__(self, other)	excluded		platform: GUI toolkit
-Lib/turtle.py	195	198	Vec2D.__rmul__	__rmul__(self, other)	excluded		platform: GUI toolkit
-Lib/turtle.py	200	201	Vec2D.__sub__	__sub__(self, other)	excluded		platform: GUI toolkit
-Lib/turtle.py	203	204	Vec2D.__neg__	__neg__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	206	207	Vec2D.__abs__	__abs__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	209	214	Vec2D.rotate	rotate(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	216	217	Vec2D.__getnewargs__	__getnewargs__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	219	220	Vec2D.__repr__	__repr__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	231	239	__methodDict	__methodDict(cls, _dict)	excluded		platform: GUI toolkit
-Lib/turtle.py	241	245	__methods	__methods(cls)	excluded		platform: GUI toolkit
-Lib/turtle.py	251	269	__forwardmethods	__forwardmethods(fromClass, toClass, toPart, exclude=())	excluded		platform: GUI toolkit
-Lib/turtle.py	278	301	ScrolledCanvas.__init__	__init__(self, master, width=500, height=350, canvwidth=600, canvheight=500)	excluded		platform: GUI toolkit
-Lib/turtle.py	303	318	ScrolledCanvas.reset	reset(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	321	334	ScrolledCanvas.adjustScrolls	adjustScrolls(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	336	338	ScrolledCanvas.onResize	onResize(self, event)	excluded		platform: GUI toolkit
-Lib/turtle.py	340	343	ScrolledCanvas.bbox	bbox(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	345	348	ScrolledCanvas.cget	cget(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/turtle.py	350	353	ScrolledCanvas.config	config(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/turtle.py	355	358	ScrolledCanvas.bind	bind(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/turtle.py	360	363	ScrolledCanvas.unbind	unbind(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/turtle.py	365	368	ScrolledCanvas.focus_force	focus_force(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	375	376	_Root.__init__	__init__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	378	380	_Root.setupcanvas	setupcanvas(self, width, height, cwidth, cheight)	excluded		platform: GUI toolkit
-Lib/turtle.py	382	383	_Root._getcanvas	_getcanvas(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	385	386	_Root.set_geometry	set_geometry(self, width, height, startx, starty)	excluded		platform: GUI toolkit
-Lib/turtle.py	388	389	_Root.ondestroy	ondestroy(self, destroy)	excluded		platform: GUI toolkit
-Lib/turtle.py	391	392	_Root.win_width	win_width(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	394	395	_Root.win_height	win_height(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	408	412	TurtleScreenBase._blankimage	_blankimage(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	414	418	TurtleScreenBase._image	_image(self, filename)	excluded		platform: GUI toolkit
-Lib/turtle.py	420	432	TurtleScreenBase.__init__	__init__(self, cv)	excluded		platform: GUI toolkit
-Lib/turtle.py	434	436	TurtleScreenBase._createpoly	_createpoly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	438	463	TurtleScreenBase._drawpoly	_drawpoly(self, polyitem, coordlist, fill=None, outline=None, width=None, top=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	465	468	TurtleScreenBase._createline	_createline(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	470	493	TurtleScreenBase._drawline	_drawline(self, lineitem, coordlist=None, fill=None, width=None, top=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	495	500	TurtleScreenBase._delete	_delete(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	502	513	TurtleScreenBase._update	_update(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	515	517	TurtleScreenBase._delay	_delay(self, delay)	excluded		platform: GUI toolkit
-Lib/turtle.py	519	527	TurtleScreenBase._iscolorstring	_iscolorstring(self, color)	excluded		platform: GUI toolkit
-Lib/turtle.py	529	536	TurtleScreenBase._bgcolor	_bgcolor(self, color=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	538	551	TurtleScreenBase._write	_write(self, pos, txt, align, font, pencolor)	excluded		platform: GUI toolkit
-Lib/turtle.py	553	566	TurtleScreenBase._onclick	_onclick(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	568	585	TurtleScreenBase._onrelease	_onrelease(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	587	606	TurtleScreenBase._ondrag	_ondrag(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	608	624	TurtleScreenBase._onscreenclick	_onscreenclick(self, fun, num=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	626	635	TurtleScreenBase._onkeyrelease	_onkeyrelease(self, fun, key)	excluded		platform: GUI toolkit
-Lib/turtle.py	637	653	TurtleScreenBase._onkeypress	_onkeypress(self, fun, key=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	655	658	TurtleScreenBase._listen	_listen(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	660	666	TurtleScreenBase._ontimer	_ontimer(self, fun, t)	excluded		platform: GUI toolkit
-Lib/turtle.py	668	671	TurtleScreenBase._createimage	_createimage(self, image)	excluded		platform: GUI toolkit
-Lib/turtle.py	673	679	TurtleScreenBase._drawimage	_drawimage(self, item, pos, image)	excluded		platform: GUI toolkit
-Lib/turtle.py	681	687	TurtleScreenBase._setbgpic	_setbgpic(self, item, image)	excluded		platform: GUI toolkit
-Lib/turtle.py	689	693	TurtleScreenBase._type	_type(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	695	705	TurtleScreenBase._pointlist	_pointlist(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	707	708	TurtleScreenBase._setscrollregion	_setscrollregion(self, srx1, sry1, srx2, sry2)	excluded		platform: GUI toolkit
-Lib/turtle.py	710	720	TurtleScreenBase._rescale	_rescale(self, xscalefactor, yscalefactor)	excluded		platform: GUI toolkit
-Lib/turtle.py	722	736	TurtleScreenBase._resize	_resize(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	738	746	TurtleScreenBase._window_size	_window_size(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	748	755	TurtleScreenBase.mainloop	mainloop(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	757	771	TurtleScreenBase.textinput	textinput(self, title, prompt)	excluded		platform: GUI toolkit
-Lib/turtle.py	773	797	TurtleScreenBase.numinput	numinput(self, title, prompt, default=None, minval=None, maxval=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	827	838	Shape.__init__	__init__(self, type_, data=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	840	863	Shape.addcomponent	addcomponent(self, poly, fill, outline=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	869	873	Tbuffer.__init__	__init__(self, bufsize=10)	excluded		platform: GUI toolkit
-Lib/turtle.py	875	882	Tbuffer.reset	reset(self, bufsize=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	884	890	Tbuffer.push	push(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	892	900	Tbuffer.pop	pop(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	902	909	Tbuffer.remove	remove(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	911	912	Tbuffer.nr_of_items	nr_of_items(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	914	915	Tbuffer.__repr__	__repr__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	928	969	TurtleScreen.__init__	__init__(self, cv, mode=_CFG['mode'], colormode=_CFG['colormode'], delay=_CFG['delay'])	excluded		platform: GUI toolkit
-Lib/turtle.py	971	1000	TurtleScreen.clear	clear(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1002	1037	TurtleScreen.mode	mode(self, mode=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1039	1079	TurtleScreen.setworldcoordinates	setworldcoordinates(self, llx, lly, urx, ury)	excluded		platform: GUI toolkit
-Lib/turtle.py	1081	1119	TurtleScreen.register_shape	register_shape(self, name, shape=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1121	1144	TurtleScreen._colorstr	_colorstr(self, color)	excluded		platform: GUI toolkit
-Lib/turtle.py	1146	1155	TurtleScreen._color	_color(self, cstr)	excluded		platform: GUI toolkit
-Lib/turtle.py	1157	1184	TurtleScreen.colormode	colormode(self, cmode=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1186	1197	TurtleScreen.reset	reset(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1199	1206	TurtleScreen.turtles	turtles(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1208	1245	TurtleScreen.bgcolor	bgcolor(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	1247	1276	TurtleScreen.tracer	tracer(self, n=None, delay=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1278	1297	TurtleScreen.delay	delay(self, delay=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1300	1318	TurtleScreen.no_animation	no_animation(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1320	1327	TurtleScreen._incrementudc	_incrementudc(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1329	1337	TurtleScreen.update	update(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1339	1346	TurtleScreen.window_width	window_width(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1348	1355	TurtleScreen.window_height	window_height(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1357	1365	TurtleScreen.getcanvas	getcanvas(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1367	1374	TurtleScreen.getshapes	getshapes(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1376	1400	TurtleScreen.onclick	onclick(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1402	1430	TurtleScreen.onkey	onkey(self, fun, key)	excluded		platform: GUI toolkit
-Lib/turtle.py	1432	1462	TurtleScreen.onkeypress	onkeypress(self, fun, key=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1464	1474	TurtleScreen.listen	listen(self, xdummy=None, ydummy=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1476	1495	TurtleScreen.ontimer	ontimer(self, fun, t=0)	excluded		platform: GUI toolkit
-Lib/turtle.py	1497	1519	TurtleScreen.bgpic	bgpic(self, picname=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1521	1538	TurtleScreen.screensize	screensize(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1540	1571	TurtleScreen.save	save(self, filename, *, overwrite=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	1593	1601	TNavigator.__init__	__init__(self, mode=DEFAULT_MODE)	excluded		platform: GUI toolkit
-Lib/turtle.py	1603	1609	TNavigator.reset	reset(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1611	1623	TNavigator._setmode	_setmode(self, mode=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1625	1632	TNavigator._setDegreesPerAU	_setDegreesPerAU(self, fullcircle)	excluded		platform: GUI toolkit
-Lib/turtle.py	1634	1658	TNavigator.degrees	degrees(self, fullcircle=360.0)	excluded		platform: GUI toolkit
-Lib/turtle.py	1660	1674	TNavigator.radians	radians(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1676	1679	TNavigator._go	_go(self, distance)	excluded		platform: GUI toolkit
-Lib/turtle.py	1681	1684	TNavigator._rotate	_rotate(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	1686	1688	TNavigator._goto	_goto(self, end)	excluded		platform: GUI toolkit
-Lib/turtle.py	1691	1702	TNavigator._undo_sequence	_undo_sequence(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1704	1711	TNavigator.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	1713	1733	TNavigator.forward	forward(self, distance)	excluded		platform: GUI toolkit
-Lib/turtle.py	1735	1753	TNavigator.back	back(self, distance)	excluded		platform: GUI toolkit
-Lib/turtle.py	1755	1774	TNavigator.right	right(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	1776	1795	TNavigator.left	left(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	1797	1806	TNavigator.pos	pos(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1808	1818	TNavigator.xcor	xcor(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1820	1830	TNavigator.ycor	ycor(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1833	1863	TNavigator.goto	goto(self, x, y=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1865	1883	TNavigator.home	home(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1885	1900	TNavigator.setx	setx(self, x)	excluded		platform: GUI toolkit
-Lib/turtle.py	1902	1917	TNavigator.sety	sety(self, y)	excluded		platform: GUI toolkit
-Lib/turtle.py	1919	1948	TNavigator.distance	distance(self, x, y=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1950	1978	TNavigator.towards	towards(self, x, y=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1980	1994	TNavigator.heading	heading(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1996	2021	TNavigator.setheading	setheading(self, to_angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	2023	2075	TNavigator.circle	circle(self, radius, extent=None, steps=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2079	2080	TNavigator.speed	speed(self, s=0)	excluded		platform: GUI toolkit
-Lib/turtle.py	2081	2082	TNavigator._tracer	_tracer(self, a=None, b=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2083	2084	TNavigator._delay	_delay(self, n=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2105	2108	TPen.__init__	__init__(self, resizemode=_CFG['resizemode'])	excluded		platform: GUI toolkit
-Lib/turtle.py	2110	2122	TPen._reset	_reset(self, pencolor=_CFG['pencolor'], fillcolor=_CFG['fillcolor'])	excluded		platform: GUI toolkit
-Lib/turtle.py	2124	2153	TPen.resizemode	resizemode(self, rmode=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2155	2174	TPen.pensize	pensize(self, width=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2177	2186	TPen.penup	penup(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2188	2197	TPen.pendown	pendown(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2199	2210	TPen.isdown	isdown(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2212	2260	TPen.speed	speed(self, speed=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2262	2302	TPen.color	color(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2304	2342	TPen.pencolor	pencolor(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2344	2382	TPen.fillcolor	fillcolor(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2384	2392	TPen.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	2394	2399	TPen.showturtle	showturtle(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2401	2408	TPen.hideturtle	hideturtle(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2410	2421	TPen.isvisible	isvisible(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2423	2546	TPen.pen	pen(self, pen=None, **pendict)	excluded		platform: GUI toolkit
-Lib/turtle.py	2550	2551	TPen._newLine	_newLine(self, usePos=True)	excluded		platform: GUI toolkit
-Lib/turtle.py	2552	2553	TPen._update	_update(self, count=True, forced=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	2554	2555	TPen._color	_color(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2556	2557	TPen._colorstr	_colorstr(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2573	2576	_TurtleImage.__init__	__init__(self, screen, shapeIndex)	excluded		platform: GUI toolkit
-Lib/turtle.py	2578	2597	_TurtleImage._setshape	_setshape(self, shapeIndex)	excluded		platform: GUI toolkit
-Lib/turtle.py	2608	2646	RawTurtle.__init__	__init__(self, canvas=None, shape=_CFG['shape'], undobuffersize=_CFG['undobuffersize'], visible=_CFG['visible'])	excluded		platform: GUI toolkit
-Lib/turtle.py	2648	2670	RawTurtle.reset	reset(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2672	2688	RawTurtle.setundobuffer	setundobuffer(self, size)	excluded		platform: GUI toolkit
-Lib/turtle.py	2690	2699	RawTurtle.undobufferentries	undobufferentries(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2701	2712	RawTurtle._clear	_clear(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2715	2725	RawTurtle.clear	clear(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2727	2733	RawTurtle._update_data	_update_data(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2735	2750	RawTurtle._update	_update(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2752	2754	RawTurtle._tracer	_tracer(self, flag=None, delay=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2756	2757	RawTurtle._color	_color(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2759	2760	RawTurtle._colorstr	_colorstr(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2762	2774	RawTurtle._cc	_cc(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2776	2821	RawTurtle.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	2823	2858	RawTurtle.clone	clone(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2860	2884	RawTurtle.shape	shape(self, name=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2886	2938	RawTurtle.shapesize	shapesize(self, stretch_wid=None, stretch_len=None, outline=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2940	2961	RawTurtle.shearfactor	shearfactor(self, shear=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2963	2997	RawTurtle.tiltangle	tiltangle(self, angle=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2999	3016	RawTurtle.tilt	tilt(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	3018	3055	RawTurtle.shapetransform	shapetransform(self, t11=None, t12=None, t21=None, t22=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3058	3068	RawTurtle._polytrafo	_polytrafo(self, poly)	excluded		platform: GUI toolkit
-Lib/turtle.py	3070	3084	RawTurtle.get_shapepoly	get_shapepoly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3087	3098	RawTurtle._getshapepoly	_getshapepoly(self, polygon, compound=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	3100	3136	RawTurtle._drawturtle	_drawturtle(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3140	3184	RawTurtle.stamp	stamp(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3186	3198	RawTurtle._clearstamp	_clearstamp(self, stampid)	excluded		platform: GUI toolkit
-Lib/turtle.py	3200	3213	RawTurtle.clearstamp	clearstamp(self, stampid)	excluded		platform: GUI toolkit
-Lib/turtle.py	3215	3241	RawTurtle.clearstamps	clearstamps(self, n=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3243	3294	RawTurtle._goto	_goto(self, end)	excluded		platform: GUI toolkit
-Lib/turtle.py	3296	3358	RawTurtle._undogoto	_undogoto(self, entry)	excluded		platform: GUI toolkit
-Lib/turtle.py	3360	3375	RawTurtle._rotate	_rotate(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	3377	3392	RawTurtle._newLine	_newLine(self, usePos=True)	excluded		platform: GUI toolkit
-Lib/turtle.py	3394	3404	RawTurtle.filling	filling(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3407	3422	RawTurtle.fill	fill(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3424	3442	RawTurtle.begin_fill	begin_fill(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3444	3462	RawTurtle.end_fill	end_fill(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3464	3502	RawTurtle.dot	dot(self, size=None, *color)	excluded		platform: GUI toolkit
-Lib/turtle.py	3504	3513	RawTurtle._write	_write(self, txt, align, font)	excluded		platform: GUI toolkit
-Lib/turtle.py	3515	3538	RawTurtle.write	write(self, arg, move=False, align='left', font=('Arial', 8, 'normal'))	excluded		platform: GUI toolkit
-Lib/turtle.py	3541	3559	RawTurtle.poly	poly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3561	3567	RawTurtle.begin_poly	begin_poly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3569	3575	RawTurtle.end_poly	end_poly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3577	3594	RawTurtle.get_poly	get_poly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3596	3607	RawTurtle.getscreen	getscreen(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3609	3623	RawTurtle.getturtle	getturtle(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3632	3634	RawTurtle._delay	_delay(self, delay=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3636	3658	RawTurtle.onclick	onclick(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3660	3683	RawTurtle.onrelease	onrelease(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3685	3703	RawTurtle.ondrag	ondrag(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3706	3738	RawTurtle._undo	_undo(self, action, data)	excluded		platform: GUI toolkit
-Lib/turtle.py	3740	3767	RawTurtle.undo	undo(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3775	3782	Screen	Screen()	excluded		platform: GUI toolkit
-Lib/turtle.py	3790	3805	_Screen.__init__	__init__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3807	3845	_Screen.setup	setup(self, width=_CFG['width'], height=_CFG['height'], startx=_CFG['leftright'], starty=_CFG['topbottom'])	excluded		platform: GUI toolkit
-Lib/turtle.py	3847	3862	_Screen.title	title(self, titlestring)	excluded		platform: GUI toolkit
-Lib/turtle.py	3864	3872	_Screen._destroy	_destroy(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3874	3876	_Screen.bye	bye(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3878	3906	_Screen.exitonclick	exitonclick(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3917	3926	Turtle.__init__	__init__(self, shape=_CFG['shape'], undobuffersize=_CFG['undobuffersize'], visible=_CFG['visible'])	excluded		platform: GUI toolkit
-Lib/turtle.py	3930	3962	write_docstringdict	write_docstringdict(filename='turtle_docstringdict')	excluded		platform: GUI toolkit
-Lib/turtle.py	3964	3979	read_docstrings	read_docstrings(lang)	excluded		platform: GUI toolkit
-Lib/turtle.py	3993	4027	getmethparlist	getmethparlist(ob)	excluded		platform: GUI toolkit
-Lib/turtle.py	4029	4038	_turtle_docrevise	_turtle_docrevise(docstr)	excluded		platform: GUI toolkit
-Lib/turtle.py	4040	4049	_screen_docrevise	_screen_docrevise(docstr)	excluded		platform: GUI toolkit
-Lib/turtle.py	4071	4081	_make_global_funcs	_make_global_funcs(functions, cls, obj, init, docrevise)	excluded		platform: GUI toolkit
-Lib/turtle.py	4092	4096	switchpen	switchpen()	excluded		platform: GUI toolkit
-Lib/turtle.py	4098	4148	demo1	demo1()	excluded		platform: GUI toolkit
-Lib/turtle.py	4151	4248	demo2	demo2()	excluded		platform: GUI toolkit
+Lib/turtle.py	105	132	config_dict	config_dict(filename)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	134	162	readconfig	readconfig(cfgdict)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	184	185	Vec2D.__new__	__new__(cls, x, y)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	187	188	Vec2D.__add__	__add__(self, other)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	190	193	Vec2D.__mul__	__mul__(self, other)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	195	198	Vec2D.__rmul__	__rmul__(self, other)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	200	201	Vec2D.__sub__	__sub__(self, other)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	203	204	Vec2D.__neg__	__neg__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	206	207	Vec2D.__abs__	__abs__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	209	214	Vec2D.rotate	rotate(self, angle)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	216	217	Vec2D.__getnewargs__	__getnewargs__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	219	220	Vec2D.__repr__	__repr__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	231	239	__methodDict	__methodDict(cls, _dict)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	241	245	__methods	__methods(cls)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	251	269	__forwardmethods	__forwardmethods(fromClass, toClass, toPart, exclude=())	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	278	301	ScrolledCanvas.__init__	__init__(self, master, width=500, height=350, canvwidth=600, canvheight=500)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	303	318	ScrolledCanvas.reset	reset(self, canvwidth=None, canvheight=None, bg=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	321	334	ScrolledCanvas.adjustScrolls	adjustScrolls(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	336	338	ScrolledCanvas.onResize	onResize(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	340	343	ScrolledCanvas.bbox	bbox(self, *args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	345	348	ScrolledCanvas.cget	cget(self, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	350	353	ScrolledCanvas.config	config(self, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	355	358	ScrolledCanvas.bind	bind(self, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	360	363	ScrolledCanvas.unbind	unbind(self, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	365	368	ScrolledCanvas.focus_force	focus_force(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	375	376	_Root.__init__	__init__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	378	380	_Root.setupcanvas	setupcanvas(self, width, height, cwidth, cheight)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	382	383	_Root._getcanvas	_getcanvas(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	385	386	_Root.set_geometry	set_geometry(self, width, height, startx, starty)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	388	389	_Root.ondestroy	ondestroy(self, destroy)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	391	392	_Root.win_width	win_width(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	394	395	_Root.win_height	win_height(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	408	412	TurtleScreenBase._blankimage	_blankimage(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	414	418	TurtleScreenBase._image	_image(self, filename)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	420	432	TurtleScreenBase.__init__	__init__(self, cv)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	434	436	TurtleScreenBase._createpoly	_createpoly(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	438	463	TurtleScreenBase._drawpoly	_drawpoly(self, polyitem, coordlist, fill=None, outline=None, width=None, top=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	465	468	TurtleScreenBase._createline	_createline(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	470	493	TurtleScreenBase._drawline	_drawline(self, lineitem, coordlist=None, fill=None, width=None, top=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	495	500	TurtleScreenBase._delete	_delete(self, item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	502	513	TurtleScreenBase._update	_update(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	515	517	TurtleScreenBase._delay	_delay(self, delay)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	519	527	TurtleScreenBase._iscolorstring	_iscolorstring(self, color)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	529	536	TurtleScreenBase._bgcolor	_bgcolor(self, color=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	538	551	TurtleScreenBase._write	_write(self, pos, txt, align, font, pencolor)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	553	566	TurtleScreenBase._onclick	_onclick(self, item, fun, num=1, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	568	585	TurtleScreenBase._onrelease	_onrelease(self, item, fun, num=1, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	587	606	TurtleScreenBase._ondrag	_ondrag(self, item, fun, num=1, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	608	624	TurtleScreenBase._onscreenclick	_onscreenclick(self, fun, num=1, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	626	635	TurtleScreenBase._onkeyrelease	_onkeyrelease(self, fun, key)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	637	653	TurtleScreenBase._onkeypress	_onkeypress(self, fun, key=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	655	658	TurtleScreenBase._listen	_listen(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	660	666	TurtleScreenBase._ontimer	_ontimer(self, fun, t)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	668	671	TurtleScreenBase._createimage	_createimage(self, image)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	673	679	TurtleScreenBase._drawimage	_drawimage(self, item, pos, image)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	681	687	TurtleScreenBase._setbgpic	_setbgpic(self, item, image)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	689	693	TurtleScreenBase._type	_type(self, item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	695	705	TurtleScreenBase._pointlist	_pointlist(self, item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	707	708	TurtleScreenBase._setscrollregion	_setscrollregion(self, srx1, sry1, srx2, sry2)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	710	720	TurtleScreenBase._rescale	_rescale(self, xscalefactor, yscalefactor)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	722	736	TurtleScreenBase._resize	_resize(self, canvwidth=None, canvheight=None, bg=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	738	746	TurtleScreenBase._window_size	_window_size(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	748	755	TurtleScreenBase.mainloop	mainloop(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	757	771	TurtleScreenBase.textinput	textinput(self, title, prompt)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	773	797	TurtleScreenBase.numinput	numinput(self, title, prompt, default=None, minval=None, maxval=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	827	838	Shape.__init__	__init__(self, type_, data=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	840	863	Shape.addcomponent	addcomponent(self, poly, fill, outline=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	869	873	Tbuffer.__init__	__init__(self, bufsize=10)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	875	882	Tbuffer.reset	reset(self, bufsize=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	884	890	Tbuffer.push	push(self, item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	892	900	Tbuffer.pop	pop(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	902	909	Tbuffer.remove	remove(self, item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	911	912	Tbuffer.nr_of_items	nr_of_items(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	914	915	Tbuffer.__repr__	__repr__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	928	969	TurtleScreen.__init__	__init__(self, cv, mode=_CFG['mode'], colormode=_CFG['colormode'], delay=_CFG['delay'])	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	971	1000	TurtleScreen.clear	clear(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1002	1037	TurtleScreen.mode	mode(self, mode=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1039	1079	TurtleScreen.setworldcoordinates	setworldcoordinates(self, llx, lly, urx, ury)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1081	1119	TurtleScreen.register_shape	register_shape(self, name, shape=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1121	1144	TurtleScreen._colorstr	_colorstr(self, color)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1146	1155	TurtleScreen._color	_color(self, cstr)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1157	1184	TurtleScreen.colormode	colormode(self, cmode=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1186	1197	TurtleScreen.reset	reset(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1199	1206	TurtleScreen.turtles	turtles(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1208	1245	TurtleScreen.bgcolor	bgcolor(self, *args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1247	1276	TurtleScreen.tracer	tracer(self, n=None, delay=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1278	1297	TurtleScreen.delay	delay(self, delay=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1300	1318	TurtleScreen.no_animation	no_animation(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1320	1327	TurtleScreen._incrementudc	_incrementudc(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1329	1337	TurtleScreen.update	update(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1339	1346	TurtleScreen.window_width	window_width(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1348	1355	TurtleScreen.window_height	window_height(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1357	1365	TurtleScreen.getcanvas	getcanvas(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1367	1374	TurtleScreen.getshapes	getshapes(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1376	1400	TurtleScreen.onclick	onclick(self, fun, btn=1, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1402	1430	TurtleScreen.onkey	onkey(self, fun, key)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1432	1462	TurtleScreen.onkeypress	onkeypress(self, fun, key=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1464	1474	TurtleScreen.listen	listen(self, xdummy=None, ydummy=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1476	1495	TurtleScreen.ontimer	ontimer(self, fun, t=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1497	1519	TurtleScreen.bgpic	bgpic(self, picname=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1521	1538	TurtleScreen.screensize	screensize(self, canvwidth=None, canvheight=None, bg=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1540	1571	TurtleScreen.save	save(self, filename, *, overwrite=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1593	1601	TNavigator.__init__	__init__(self, mode=DEFAULT_MODE)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1603	1609	TNavigator.reset	reset(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1611	1623	TNavigator._setmode	_setmode(self, mode=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1625	1632	TNavigator._setDegreesPerAU	_setDegreesPerAU(self, fullcircle)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1634	1658	TNavigator.degrees	degrees(self, fullcircle=360.0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1660	1674	TNavigator.radians	radians(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1676	1679	TNavigator._go	_go(self, distance)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1681	1684	TNavigator._rotate	_rotate(self, angle)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1686	1688	TNavigator._goto	_goto(self, end)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1691	1702	TNavigator._undo_sequence	_undo_sequence(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1704	1711	TNavigator.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1713	1733	TNavigator.forward	forward(self, distance)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1735	1753	TNavigator.back	back(self, distance)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1755	1774	TNavigator.right	right(self, angle)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1776	1795	TNavigator.left	left(self, angle)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1797	1806	TNavigator.pos	pos(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1808	1818	TNavigator.xcor	xcor(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1820	1830	TNavigator.ycor	ycor(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1833	1863	TNavigator.goto	goto(self, x, y=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1865	1883	TNavigator.home	home(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1885	1900	TNavigator.setx	setx(self, x)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1902	1917	TNavigator.sety	sety(self, y)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1919	1948	TNavigator.distance	distance(self, x, y=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1950	1978	TNavigator.towards	towards(self, x, y=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1980	1994	TNavigator.heading	heading(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	1996	2021	TNavigator.setheading	setheading(self, to_angle)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2023	2075	TNavigator.circle	circle(self, radius, extent=None, steps=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2079	2080	TNavigator.speed	speed(self, s=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2081	2082	TNavigator._tracer	_tracer(self, a=None, b=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2083	2084	TNavigator._delay	_delay(self, n=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2105	2108	TPen.__init__	__init__(self, resizemode=_CFG['resizemode'])	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2110	2122	TPen._reset	_reset(self, pencolor=_CFG['pencolor'], fillcolor=_CFG['fillcolor'])	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2124	2153	TPen.resizemode	resizemode(self, rmode=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2155	2174	TPen.pensize	pensize(self, width=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2177	2186	TPen.penup	penup(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2188	2197	TPen.pendown	pendown(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2199	2210	TPen.isdown	isdown(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2212	2260	TPen.speed	speed(self, speed=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2262	2302	TPen.color	color(self, *args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2304	2342	TPen.pencolor	pencolor(self, *args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2344	2382	TPen.fillcolor	fillcolor(self, *args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2384	2392	TPen.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2394	2399	TPen.showturtle	showturtle(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2401	2408	TPen.hideturtle	hideturtle(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2410	2421	TPen.isvisible	isvisible(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2423	2546	TPen.pen	pen(self, pen=None, **pendict)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2550	2551	TPen._newLine	_newLine(self, usePos=True)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2552	2553	TPen._update	_update(self, count=True, forced=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2554	2555	TPen._color	_color(self, args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2556	2557	TPen._colorstr	_colorstr(self, args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2573	2576	_TurtleImage.__init__	__init__(self, screen, shapeIndex)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2578	2597	_TurtleImage._setshape	_setshape(self, shapeIndex)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2608	2646	RawTurtle.__init__	__init__(self, canvas=None, shape=_CFG['shape'], undobuffersize=_CFG['undobuffersize'], visible=_CFG['visible'])	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2648	2670	RawTurtle.reset	reset(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2672	2688	RawTurtle.setundobuffer	setundobuffer(self, size)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2690	2699	RawTurtle.undobufferentries	undobufferentries(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2701	2712	RawTurtle._clear	_clear(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2715	2725	RawTurtle.clear	clear(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2727	2733	RawTurtle._update_data	_update_data(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2735	2750	RawTurtle._update	_update(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2752	2754	RawTurtle._tracer	_tracer(self, flag=None, delay=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2756	2757	RawTurtle._color	_color(self, args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2759	2760	RawTurtle._colorstr	_colorstr(self, args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2762	2774	RawTurtle._cc	_cc(self, args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2776	2821	RawTurtle.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2823	2858	RawTurtle.clone	clone(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2860	2884	RawTurtle.shape	shape(self, name=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2886	2938	RawTurtle.shapesize	shapesize(self, stretch_wid=None, stretch_len=None, outline=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2940	2961	RawTurtle.shearfactor	shearfactor(self, shear=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2963	2997	RawTurtle.tiltangle	tiltangle(self, angle=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	2999	3016	RawTurtle.tilt	tilt(self, angle)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3018	3055	RawTurtle.shapetransform	shapetransform(self, t11=None, t12=None, t21=None, t22=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3058	3068	RawTurtle._polytrafo	_polytrafo(self, poly)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3070	3084	RawTurtle.get_shapepoly	get_shapepoly(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3087	3098	RawTurtle._getshapepoly	_getshapepoly(self, polygon, compound=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3100	3136	RawTurtle._drawturtle	_drawturtle(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3140	3184	RawTurtle.stamp	stamp(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3186	3198	RawTurtle._clearstamp	_clearstamp(self, stampid)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3200	3213	RawTurtle.clearstamp	clearstamp(self, stampid)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3215	3241	RawTurtle.clearstamps	clearstamps(self, n=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3243	3294	RawTurtle._goto	_goto(self, end)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3296	3358	RawTurtle._undogoto	_undogoto(self, entry)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3360	3375	RawTurtle._rotate	_rotate(self, angle)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3377	3392	RawTurtle._newLine	_newLine(self, usePos=True)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3394	3404	RawTurtle.filling	filling(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3407	3422	RawTurtle.fill	fill(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3424	3442	RawTurtle.begin_fill	begin_fill(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3444	3462	RawTurtle.end_fill	end_fill(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3464	3502	RawTurtle.dot	dot(self, size=None, *color)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3504	3513	RawTurtle._write	_write(self, txt, align, font)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3515	3538	RawTurtle.write	write(self, arg, move=False, align='left', font=('Arial', 8, 'normal'))	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3541	3559	RawTurtle.poly	poly(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3561	3567	RawTurtle.begin_poly	begin_poly(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3569	3575	RawTurtle.end_poly	end_poly(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3577	3594	RawTurtle.get_poly	get_poly(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3596	3607	RawTurtle.getscreen	getscreen(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3609	3623	RawTurtle.getturtle	getturtle(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3632	3634	RawTurtle._delay	_delay(self, delay=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3636	3658	RawTurtle.onclick	onclick(self, fun, btn=1, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3660	3683	RawTurtle.onrelease	onrelease(self, fun, btn=1, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3685	3703	RawTurtle.ondrag	ondrag(self, fun, btn=1, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3706	3738	RawTurtle._undo	_undo(self, action, data)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3740	3767	RawTurtle.undo	undo(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3775	3782	Screen	Screen()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3790	3805	_Screen.__init__	__init__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3807	3845	_Screen.setup	setup(self, width=_CFG['width'], height=_CFG['height'], startx=_CFG['leftright'], starty=_CFG['topbottom'])	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3847	3862	_Screen.title	title(self, titlestring)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3864	3872	_Screen._destroy	_destroy(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3874	3876	_Screen.bye	bye(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3878	3906	_Screen.exitonclick	exitonclick(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3917	3926	Turtle.__init__	__init__(self, shape=_CFG['shape'], undobuffersize=_CFG['undobuffersize'], visible=_CFG['visible'])	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3930	3962	write_docstringdict	write_docstringdict(filename='turtle_docstringdict')	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3964	3979	read_docstrings	read_docstrings(lang)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	3993	4027	getmethparlist	getmethparlist(ob)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	4029	4038	_turtle_docrevise	_turtle_docrevise(docstr)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	4040	4049	_screen_docrevise	_screen_docrevise(docstr)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	4071	4081	_make_global_funcs	_make_global_funcs(functions, cls, obj, init, docrevise)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	4092	4096	switchpen	switchpen()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	4098	4148	demo1	demo1()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtle.py	4151	4248	demo2	demo2()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

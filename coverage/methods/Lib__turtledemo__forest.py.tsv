@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/forest.py	14	15	symRandom	symRandom(n)	excluded		platform: GUI toolkit
-Lib/turtledemo/forest.py	17	20	randomize	randomize(branchlist, angledist, sizedist)	excluded		platform: GUI toolkit
-Lib/turtledemo/forest.py	22	25	randomfd	randomfd(t, distance, parts, angledist)	excluded		platform: GUI toolkit
-Lib/turtledemo/forest.py	27	48	tree	tree(tlist, size, level, widthfactor, branchlists, angledist=10, sizedist=5)	excluded		platform: GUI toolkit
-Lib/turtledemo/forest.py	51	59	start	start(t, x, y)	excluded		platform: GUI toolkit
-Lib/turtledemo/forest.py	61	65	doit1	doit1(level, pen)	excluded		platform: GUI toolkit
-Lib/turtledemo/forest.py	67	71	doit2	doit2(level, pen)	excluded		platform: GUI toolkit
-Lib/turtledemo/forest.py	73	77	doit3	doit3(level, pen)	excluded		platform: GUI toolkit
-Lib/turtledemo/forest.py	80	100	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/forest.py	14	15	symRandom	symRandom(n)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/forest.py	17	20	randomize	randomize(branchlist, angledist, sizedist)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/forest.py	22	25	randomfd	randomfd(t, distance, parts, angledist)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/forest.py	27	48	tree	tree(tlist, size, level, widthfactor, branchlists, angledist=10, sizedist=5)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/forest.py	51	59	start	start(t, x, y)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/forest.py	61	65	doit1	doit1(level, pen)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/forest.py	67	71	doit2	doit2(level, pen)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/forest.py	73	77	doit3	doit3(level, pen)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/forest.py	80	100	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

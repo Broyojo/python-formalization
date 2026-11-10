@@ -1,21 +1,21 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tkinter/font.py	21	24	nametofont	nametofont(name, root=None)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	51	56	Font._set	_set(self, kw)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	58	62	Font._get	_get(self, args)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	64	68	Font._mkdict	_mkdict(self, args)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	70	107	Font.__init__	__init__(self, root=None, font=None, name=None, exists=False, **options)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	109	110	Font.__str__	__str__(self)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	112	114	Font.__repr__	__repr__(self)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	116	125	Font.__eq__	__eq__(self, other)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	127	128	Font.__getitem__	__getitem__(self, key)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	130	131	Font.__setitem__	__setitem__(self, key, value)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	135	140	Font.__del__	__del__(self)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	142	144	Font.copy	copy(self)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	146	156	Font.actual	actual(self, option=None, displayof=None)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	158	160	Font.cget	cget(self, option)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	162	169	Font.config	config(self, **options)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	173	178	Font.measure	measure(self, text, displayof=None)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	180	198	Font.metrics	metrics(self, *options, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	201	208	families	families(root=None, displayof=None)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	211	215	names	names(root=None)	excluded		platform: GUI toolkit
-Lib/tkinter/font.py	218	224	__getattr__	__getattr__(name)	excluded		platform: GUI toolkit
+Lib/tkinter/font.py	21	24	nametofont	nametofont(name, root=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	51	56	Font._set	_set(self, kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	58	62	Font._get	_get(self, args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	64	68	Font._mkdict	_mkdict(self, args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	70	107	Font.__init__	__init__(self, root=None, font=None, name=None, exists=False, **options)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	109	110	Font.__str__	__str__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	112	114	Font.__repr__	__repr__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	116	125	Font.__eq__	__eq__(self, other)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	127	128	Font.__getitem__	__getitem__(self, key)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	130	131	Font.__setitem__	__setitem__(self, key, value)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	135	140	Font.__del__	__del__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	142	144	Font.copy	copy(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	146	156	Font.actual	actual(self, option=None, displayof=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	158	160	Font.cget	cget(self, option)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	162	169	Font.config	config(self, **options)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	173	178	Font.measure	measure(self, text, displayof=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	180	198	Font.metrics	metrics(self, *options, **kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	201	208	families	families(root=None, displayof=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	211	215	names	names(root=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/font.py	218	224	__getattr__	__getattr__(name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

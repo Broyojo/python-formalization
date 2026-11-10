@@ -1,14 +1,14 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/codecontext.py	26	28	get_spaces_firstword	get_spaces_firstword(codeline, c=re.compile('^(\\\\s*)(\\\\w*)'))	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	31	42	get_line_info	get_line_info(codeline)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	49	68	CodeContext.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	70	75	CodeContext._reset	_reset(self)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	78	82	CodeContext.reload	reload(cls)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	84	91	CodeContext.__del__	__del__(self)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	93	147	CodeContext.toggle_code_context_event	toggle_code_context_event(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	149	177	CodeContext.get_context	get_context(self, new_topvisible, stopline=1, stopindent=0)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	179	217	CodeContext.update_code_context	update_code_context(self)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	219	238	CodeContext.jumptoline	jumptoline(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	240	244	CodeContext.timer_event	timer_event(self)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	246	249	CodeContext.update_font	update_font(self)	excluded		platform: GUI toolkit
-Lib/idlelib/codecontext.py	251	260	CodeContext.update_highlight_colors	update_highlight_colors(self)	excluded		platform: GUI toolkit
+Lib/idlelib/codecontext.py	26	28	get_spaces_firstword	get_spaces_firstword(codeline, c=re.compile('^(\\\\s*)(\\\\w*)'))	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	31	42	get_line_info	get_line_info(codeline)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	49	68	CodeContext.__init__	__init__(self, editwin)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	70	75	CodeContext._reset	_reset(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	78	82	CodeContext.reload	reload(cls)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	84	91	CodeContext.__del__	__del__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	93	147	CodeContext.toggle_code_context_event	toggle_code_context_event(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	149	177	CodeContext.get_context	get_context(self, new_topvisible, stopline=1, stopindent=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	179	217	CodeContext.update_code_context	update_code_context(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	219	238	CodeContext.jumptoline	jumptoline(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	240	244	CodeContext.timer_event	timer_event(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	246	249	CodeContext.update_font	update_font(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/codecontext.py	251	260	CodeContext.update_highlight_colors	update_highlight_colors(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

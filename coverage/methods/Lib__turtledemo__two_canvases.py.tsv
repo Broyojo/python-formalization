@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/two_canvases.py	11	49	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/two_canvases.py	11	49	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

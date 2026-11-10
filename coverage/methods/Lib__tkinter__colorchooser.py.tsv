@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tkinter/colorchooser.py	37	48	Chooser._fixoptions	_fixoptions(self)	excluded		platform: GUI toolkit
-Lib/tkinter/colorchooser.py	50	64	Chooser._fixresult	_fixresult(self, widget, result)	excluded		platform: GUI toolkit
-Lib/tkinter/colorchooser.py	70	81	askcolor	askcolor(color=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/colorchooser.py	37	48	Chooser._fixoptions	_fixoptions(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/colorchooser.py	50	64	Chooser._fixresult	_fixresult(self, widget, result)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/colorchooser.py	70	81	askcolor	askcolor(color=None, **options)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

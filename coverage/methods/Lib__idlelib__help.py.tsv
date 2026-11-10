@@ -1,14 +1,14 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/help.py	57	70	HelpParser.__init__	__init__(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	72	75	HelpParser.indent	indent(self, amt=1)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	77	126	HelpParser.handle_starttag	handle_starttag(self, tag, attrs)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	128	146	HelpParser.handle_endtag	handle_endtag(self, tag)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	148	164	HelpParser.handle_data	handle_data(self, data)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	169	198	HelpText.__init__	__init__(self, parent, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	200	208	HelpText.findfont	findfont(self, names)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	213	227	HelpFrame.__init__	__init__(self, parent, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	229	236	HelpFrame.toc_menu	toc_menu(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	241	248	HelpWindow.__init__	__init__(self, parent, filename, title)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	251	285	copy_strip	copy_strip()	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	288	294	show_idlehelp	show_idlehelp(parent)	excluded		platform: GUI toolkit
-Lib/idlelib/help.py	297	335	_get_dochome	_get_dochome()	excluded		platform: GUI toolkit
+Lib/idlelib/help.py	57	70	HelpParser.__init__	__init__(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	72	75	HelpParser.indent	indent(self, amt=1)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	77	126	HelpParser.handle_starttag	handle_starttag(self, tag, attrs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	128	146	HelpParser.handle_endtag	handle_endtag(self, tag)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	148	164	HelpParser.handle_data	handle_data(self, data)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	169	198	HelpText.__init__	__init__(self, parent, filename)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	200	208	HelpText.findfont	findfont(self, names)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	213	227	HelpFrame.__init__	__init__(self, parent, filename)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	229	236	HelpFrame.toc_menu	toc_menu(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	241	248	HelpWindow.__init__	__init__(self, parent, filename, title)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	251	285	copy_strip	copy_strip()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	288	294	show_idlehelp	show_idlehelp(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help.py	297	335	_get_dochome	_get_dochome()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

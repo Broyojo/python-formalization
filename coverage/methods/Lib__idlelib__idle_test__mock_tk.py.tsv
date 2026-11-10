@@ -1,23 +1,23 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/idle_test/mock_tk.py	24	26	Event.__init__	__init__(self, **kwds)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	31	34	Var.__init__	__init__(self, master=None, value=None, name=None)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	35	36	Var.set	set(self, value)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	37	38	Var.get	get(self)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	48	49	Mbox_func.__init__	__init__(self, result=None)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	50	56	Mbox_func.__call__	__call__(self, title, message, *args, **kwds)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	107	113	Text.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	115	117	Text.index	index(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	119	170	Text._decode	_decode(self, index, endflag=0)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	172	184	Text._endex	_endex(self, endflag)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	186	199	Text.insert	insert(self, index, chars)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	201	217	Text.get	get(self, index1, index2=None)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	219	248	Text.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	250	267	Text.compare	compare(self, index1, op, index2)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	272	274	Text.mark_set	mark_set(self, name, index)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	276	277	Text.mark_unset	mark_unset(self, *markNames)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	279	281	Text.tag_remove	tag_remove(self, tagName, index1, index2=None)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	286	287	Text.scan_dragto	scan_dragto(self, x, y)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	289	290	Text.scan_mark	scan_mark(self, x, y)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	292	294	Text.see	see(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	299	301	Text.bind	bind(sequence=None, func=None, add=None)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/mock_tk.py	306	307	Entry.focus_set	focus_set(self)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/mock_tk.py	24	26	Event.__init__	__init__(self, **kwds)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	31	34	Var.__init__	__init__(self, master=None, value=None, name=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	35	36	Var.set	set(self, value)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	37	38	Var.get	get(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	48	49	Mbox_func.__init__	__init__(self, result=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	50	56	Mbox_func.__call__	__call__(self, title, message, *args, **kwds)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	107	113	Text.__init__	__init__(self, master=None, cnf={}, **kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	115	117	Text.index	index(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	119	170	Text._decode	_decode(self, index, endflag=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	172	184	Text._endex	_endex(self, endflag)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	186	199	Text.insert	insert(self, index, chars)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	201	217	Text.get	get(self, index1, index2=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	219	248	Text.delete	delete(self, index1, index2=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	250	267	Text.compare	compare(self, index1, op, index2)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	272	274	Text.mark_set	mark_set(self, name, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	276	277	Text.mark_unset	mark_unset(self, *markNames)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	279	281	Text.tag_remove	tag_remove(self, tagName, index1, index2=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	286	287	Text.scan_dragto	scan_dragto(self, x, y)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	289	290	Text.scan_mark	scan_mark(self, x, y)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	292	294	Text.see	see(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	299	301	Text.bind	bind(sequence=None, func=None, add=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/idle_test/mock_tk.py	306	307	Entry.focus_set	focus_set(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

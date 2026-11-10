@@ -1,11 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/bytedesign.py	29	45	Designer.design	design(self, homePos, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	47	63	Designer.wheel	wheel(self, initpos, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	65	80	Designer.tripiece	tripiece(self, initpos, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	82	104	Designer.pentpiece	pentpiece(self, initpos, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	106	110	Designer.pentl	pentl(self, side, ang, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	112	116	Designer.pentr	pentr(self, side, ang, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	118	126	Designer.tripolyr	tripolyr(self, side, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	128	136	Designer.tripolyl	tripolyl(self, side, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	138	142	Designer.centerpiece	centerpiece(self, s, a, scale)	excluded		platform: GUI toolkit
-Lib/turtledemo/bytedesign.py	144	153	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/bytedesign.py	29	45	Designer.design	design(self, homePos, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	47	63	Designer.wheel	wheel(self, initpos, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	65	80	Designer.tripiece	tripiece(self, initpos, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	82	104	Designer.pentpiece	pentpiece(self, initpos, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	106	110	Designer.pentl	pentl(self, side, ang, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	112	116	Designer.pentr	pentr(self, side, ang, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	118	126	Designer.tripolyr	tripolyr(self, side, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	128	136	Designer.tripolyl	tripolyl(self, side, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	138	142	Designer.centerpiece	centerpiece(self, s, a, scale)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/bytedesign.py	144	153	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

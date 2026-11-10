@@ -1,3 +1,3 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/yinyang.py	13	35	yin	yin(radius, color1, color2)	excluded		platform: GUI toolkit
-Lib/turtledemo/yinyang.py	37	42	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/yinyang.py	13	35	yin	yin(radius, color1, color2)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/yinyang.py	37	42	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

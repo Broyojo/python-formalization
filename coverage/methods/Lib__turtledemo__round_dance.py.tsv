@@ -1,3 +1,3 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/round_dance.py	22	24	stop	stop()	excluded		platform: GUI toolkit
-Lib/turtledemo/round_dance.py	26	77	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/round_dance.py	22	24	stop	stop()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/round_dance.py	26	77	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

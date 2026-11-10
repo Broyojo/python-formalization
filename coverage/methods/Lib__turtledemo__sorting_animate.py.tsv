@@ -1,24 +1,24 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/sorting_animate.py	18	24	Block.__init__	__init__(self, size)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	26	27	Block.glow	glow(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	29	30	Block.unglow	unglow(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	32	33	Block.__repr__	__repr__(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	38	41	Shelf.__init__	__init__(self, y)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	43	49	Shelf.push	push(self, d)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	51	54	Shelf._close_gap_from_i	_close_gap_from_i(self, i)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	56	59	Shelf._open_gap_from_i	_open_gap_from_i(self, i)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	61	66	Shelf.pop	pop(self, key)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	68	76	Shelf.insert	insert(self, key, b)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	78	85	isort	isort(shelf)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	87	95	ssort	ssort(shelf)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	97	106	partition	partition(shelf, left, right, pivot_index)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	108	113	qsort	qsort(shelf, left, right)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	115	126	randomize	randomize()	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	128	131	show_text	show_text(text, line=0)	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	133	141	start_ssort	start_ssort()	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	143	151	start_isort	start_isort()	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	153	161	start_qsort	start_qsort()	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	163	168	init_shelf	init_shelf()	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	170	174	disable_keys	disable_keys()	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	176	181	enable_keys	enable_keys()	excluded		platform: GUI toolkit
-Lib/turtledemo/sorting_animate.py	183	191	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/sorting_animate.py	18	24	Block.__init__	__init__(self, size)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	26	27	Block.glow	glow(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	29	30	Block.unglow	unglow(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	32	33	Block.__repr__	__repr__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	38	41	Shelf.__init__	__init__(self, y)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	43	49	Shelf.push	push(self, d)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	51	54	Shelf._close_gap_from_i	_close_gap_from_i(self, i)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	56	59	Shelf._open_gap_from_i	_open_gap_from_i(self, i)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	61	66	Shelf.pop	pop(self, key)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	68	76	Shelf.insert	insert(self, key, b)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	78	85	isort	isort(shelf)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	87	95	ssort	ssort(shelf)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	97	106	partition	partition(shelf, left, right, pivot_index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	108	113	qsort	qsort(shelf, left, right)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	115	126	randomize	randomize()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	128	131	show_text	show_text(text, line=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	133	141	start_ssort	start_ssort()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	143	151	start_isort	start_isort()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	153	161	start_qsort	start_qsort()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	163	168	init_shelf	init_shelf()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	170	174	disable_keys	disable_keys()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	176	181	enable_keys	enable_keys()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/sorting_animate.py	183	191	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

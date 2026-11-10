@@ -1,22 +1,22 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/browser.py	29	32	is_browseable_extension	is_browseable_extension(path)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	35	64	transform_children	transform_children(child_dict, modname=None)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	74	96	ModuleBrowser.__init__	__init__(self, master, path, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	98	101	ModuleBrowser.close	close(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	103	132	ModuleBrowser.init	init(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	134	137	ModuleBrowser.settitle	settitle(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	139	141	ModuleBrowser.rootnode	rootnode(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	151	157	ModuleBrowserTreeItem.__init__	__init__(self, file)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	159	161	ModuleBrowserTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	163	165	ModuleBrowserTreeItem.GetIconName	GetIconName(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	167	169	ModuleBrowserTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	171	177	ModuleBrowserTreeItem.OnDoubleClick	OnDoubleClick(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	179	181	ModuleBrowserTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	183	193	ModuleBrowserTreeItem.listchildren	listchildren(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	202	206	ChildBrowserTreeItem.__init__	__init__(self, obj)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	208	214	ChildBrowserTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	216	221	ChildBrowserTreeItem.GetIconName	GetIconName(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	223	225	ChildBrowserTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	227	230	ChildBrowserTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	232	238	ChildBrowserTreeItem.OnDoubleClick	OnDoubleClick(self)	excluded		platform: GUI toolkit
-Lib/idlelib/browser.py	241	251	_module_browser	_module_browser(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/browser.py	29	32	is_browseable_extension	is_browseable_extension(path)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	35	64	transform_children	transform_children(child_dict, modname=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	74	96	ModuleBrowser.__init__	__init__(self, master, path, *, _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	98	101	ModuleBrowser.close	close(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	103	132	ModuleBrowser.init	init(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	134	137	ModuleBrowser.settitle	settitle(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	139	141	ModuleBrowser.rootnode	rootnode(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	151	157	ModuleBrowserTreeItem.__init__	__init__(self, file)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	159	161	ModuleBrowserTreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	163	165	ModuleBrowserTreeItem.GetIconName	GetIconName(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	167	169	ModuleBrowserTreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	171	177	ModuleBrowserTreeItem.OnDoubleClick	OnDoubleClick(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	179	181	ModuleBrowserTreeItem.IsExpandable	IsExpandable(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	183	193	ModuleBrowserTreeItem.listchildren	listchildren(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	202	206	ChildBrowserTreeItem.__init__	__init__(self, obj)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	208	214	ChildBrowserTreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	216	221	ChildBrowserTreeItem.GetIconName	GetIconName(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	223	225	ChildBrowserTreeItem.IsExpandable	IsExpandable(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	227	230	ChildBrowserTreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	232	238	ChildBrowserTreeItem.OnDoubleClick	OnDoubleClick(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/browser.py	241	251	_module_browser	_module_browser(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

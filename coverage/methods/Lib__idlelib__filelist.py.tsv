@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/filelist.py	12	16	FileList.__init__	__init__(self, root)	excluded		platform: GUI toolkit
-Lib/idlelib/filelist.py	18	42	FileList.open	open(self, filename, action=None)	excluded		platform: GUI toolkit
-Lib/idlelib/filelist.py	44	47	FileList.gotofileline	gotofileline(self, filename, lineno=None)	excluded		platform: GUI toolkit
-Lib/idlelib/filelist.py	49	50	FileList.new	new(self, filename=None)	excluded		platform: GUI toolkit
-Lib/idlelib/filelist.py	52	57	FileList.close_all_callback	close_all_callback(self, *args, **kwds)	excluded		platform: GUI toolkit
-Lib/idlelib/filelist.py	59	69	FileList.unregister_maybe_terminate	unregister_maybe_terminate(self, edit)	excluded		platform: GUI toolkit
-Lib/idlelib/filelist.py	71	101	FileList.filename_changed_edit	filename_changed_edit(self, edit)	excluded		platform: GUI toolkit
-Lib/idlelib/filelist.py	103	111	FileList.canonize	canonize(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/filelist.py	114	125	_test	_test()	excluded		platform: GUI toolkit
+Lib/idlelib/filelist.py	12	16	FileList.__init__	__init__(self, root)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/filelist.py	18	42	FileList.open	open(self, filename, action=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/filelist.py	44	47	FileList.gotofileline	gotofileline(self, filename, lineno=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/filelist.py	49	50	FileList.new	new(self, filename=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/filelist.py	52	57	FileList.close_all_callback	close_all_callback(self, *args, **kwds)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/filelist.py	59	69	FileList.unregister_maybe_terminate	unregister_maybe_terminate(self, edit)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/filelist.py	71	101	FileList.filename_changed_edit	filename_changed_edit(self, edit)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/filelist.py	103	111	FileList.canonize	canonize(self, filename)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/filelist.py	114	125	_test	_test()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

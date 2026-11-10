@@ -1,9 +1,9 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/percolator.py	7	14	Percolator.__init__	__init__(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/percolator.py	16	24	Percolator.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/percolator.py	26	28	Percolator.insert	insert(self, index, chars, tags=None)	excluded		platform: GUI toolkit
-Lib/idlelib/percolator.py	30	32	Percolator.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
-Lib/idlelib/percolator.py	34	39	Percolator.insertfilter	insertfilter(self, filter)	excluded		platform: GUI toolkit
-Lib/idlelib/percolator.py	41	54	Percolator.insertfilterafter	insertfilterafter(self, filter, after)	excluded		platform: GUI toolkit
-Lib/idlelib/percolator.py	56	70	Percolator.removefilter	removefilter(self, filter)	excluded		platform: GUI toolkit
-Lib/idlelib/percolator.py	73	112	_percolator	_percolator(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/percolator.py	7	14	Percolator.__init__	__init__(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/percolator.py	16	24	Percolator.close	close(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/percolator.py	26	28	Percolator.insert	insert(self, index, chars, tags=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/percolator.py	30	32	Percolator.delete	delete(self, index1, index2=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/percolator.py	34	39	Percolator.insertfilter	insertfilter(self, filter)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/percolator.py	41	54	Percolator.insertfilterafter	insertfilterafter(self, filter, after)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/percolator.py	56	70	Percolator.removefilter	removefilter(self, filter)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/percolator.py	73	112	_percolator	_percolator(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

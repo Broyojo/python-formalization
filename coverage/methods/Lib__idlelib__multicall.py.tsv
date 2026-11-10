@@ -1,16 +1,16 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/multicall.py	74	80	_SimpleBinder.__init__	__init__(self, type, widget, widgetinst)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	82	96	_SimpleBinder.bind	bind(self, triplet, func)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	98	102	_SimpleBinder.unbind	unbind(self, triplet, func)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	104	111	_SimpleBinder.__del__	__del__(self)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	124	140	expand_substates	expand_substates(states)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	161	188	_ComplexBinder.__create_handler	__create_handler(self, lists, mc_type, mc_state)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	190	211	_ComplexBinder.__init__	__init__(self, type, widget, widgetinst)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	213	229	_ComplexBinder.bind	bind(self, triplet, func)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	231	236	_ComplexBinder.unbind	unbind(self, triplet, func)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	238	244	_ComplexBinder.__del__	__del__(self)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	267	304	_parse_sequence	_parse_sequence(sequence)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	306	311	_triplet_to_sequence	_triplet_to_sequence(triplet)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	314	321	warn_bad_binding	warn_bad_binding(virtual, sequence, err)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	325	444	MultiCallCreator	MultiCallCreator(widget)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	447	473	_multi_call	_multi_call(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/multicall.py	74	80	_SimpleBinder.__init__	__init__(self, type, widget, widgetinst)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	82	96	_SimpleBinder.bind	bind(self, triplet, func)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	98	102	_SimpleBinder.unbind	unbind(self, triplet, func)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	104	111	_SimpleBinder.__del__	__del__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	124	140	expand_substates	expand_substates(states)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	161	188	_ComplexBinder.__create_handler	__create_handler(self, lists, mc_type, mc_state)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	190	211	_ComplexBinder.__init__	__init__(self, type, widget, widgetinst)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	213	229	_ComplexBinder.bind	bind(self, triplet, func)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	231	236	_ComplexBinder.unbind	unbind(self, triplet, func)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	238	244	_ComplexBinder.__del__	__del__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	267	304	_parse_sequence	_parse_sequence(sequence)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	306	311	_triplet_to_sequence	_triplet_to_sequence(triplet)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	314	321	warn_bad_binding	warn_bad_binding(virtual, sequence, err)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	325	444	MultiCallCreator	MultiCallCreator(widget)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/multicall.py	447	473	_multi_call	_multi_call(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

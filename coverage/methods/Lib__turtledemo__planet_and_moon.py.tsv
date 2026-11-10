@@ -1,9 +1,9 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/planet_and_moon.py	22	25	GravSys.__init__	__init__(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/planet_and_moon.py	26	28	GravSys.init	init(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/planet_and_moon.py	29	33	GravSys.start	start(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/planet_and_moon.py	36	45	Star.__init__	__init__(self, m, x, v, gravSys, shape)	excluded		platform: GUI toolkit
-Lib/turtledemo/planet_and_moon.py	46	49	Star.init	init(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/planet_and_moon.py	50	56	Star.acc	acc(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/planet_and_moon.py	57	63	Star.step	step(self)	excluded		platform: GUI toolkit
-Lib/turtledemo/planet_and_moon.py	67	104	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/planet_and_moon.py	22	25	GravSys.__init__	__init__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/planet_and_moon.py	26	28	GravSys.init	init(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/planet_and_moon.py	29	33	GravSys.start	start(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/planet_and_moon.py	36	45	Star.__init__	__init__(self, m, x, v, gravSys, shape)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/planet_and_moon.py	46	49	Star.init	init(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/planet_and_moon.py	50	56	Star.acc	acc(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/planet_and_moon.py	57	63	Star.step	step(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/planet_and_moon.py	67	104	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

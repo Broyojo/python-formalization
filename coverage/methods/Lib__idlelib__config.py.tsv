@@ -1,48 +1,48 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/config.py	43	48	IdleConfParser.__init__	__init__(self, cfgFile, cfgDefaults=None)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	50	65	IdleConfParser.Get	Get(self, section, option, type=None, default=None, raw=False)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	67	72	IdleConfParser.GetOptionList	GetOptionList(self, section)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	74	78	IdleConfParser.Load	Load(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	85	100	IdleUserConfParser.SetOption	SetOption(self, section, option, value)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	102	109	IdleUserConfParser.RemoveOption	RemoveOption(self, section, option)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	111	114	IdleUserConfParser.AddSection	AddSection(self, section)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	116	120	IdleUserConfParser.RemoveEmptySections	RemoveEmptySections(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	122	125	IdleUserConfParser.IsEmpty	IsEmpty(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	127	144	IdleUserConfParser.Save	Save(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	157	169	IdleConf.__init__	__init__(self, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	171	179	IdleConf.CreateConfigHandlers	CreateConfigHandlers(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	181	215	IdleConf.GetUserCfgDir	GetUserCfgDir(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	217	255	IdleConf.GetOption	GetOption(self, configType, section, option, default=None, type=None, warn_on_default=True, raw=False)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	257	259	IdleConf.SetOption	SetOption(self, configType, section, option, value)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	261	275	IdleConf.GetSectionList	GetSectionList(self, configSet, configType)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	277	290	IdleConf.GetHighlight	GetHighlight(self, theme, element)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	292	358	IdleConf.GetThemeDict	GetThemeDict(self, type, themeName)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	360	362	IdleConf.CurrentTheme	CurrentTheme(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	364	366	IdleConf.CurrentKeys	CurrentKeys(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	368	404	IdleConf.current_colors_and_keys	current_colors_and_keys(self, section)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	407	413	IdleConf.default_keys	default_keys()	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	415	454	IdleConf.GetExtensions	GetExtensions(self, active_only=True, editor_only=False, shell_only=False)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	456	458	IdleConf.RemoveKeyBindNames	RemoveKeyBindNames(self, extnNameList)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	460	472	IdleConf.GetExtnNameForEvent	GetExtnNameForEvent(self, virtualEvent)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	474	501	IdleConf.GetExtensionKeys	GetExtensionKeys(self, extensionName)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	503	532	IdleConf.__GetRawExtensionKeys	__GetRawExtensionKeys(self, extension_name)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	534	564	IdleConf.GetExtensionBindings	GetExtensionBindings(self, extensionName)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	566	575	IdleConf.GetKeyBinding	GetKeyBinding(self, keySetName, eventStr)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	577	592	IdleConf.GetCurrentKeySet	GetCurrentKeySet(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	594	610	IdleConf.GetKeySet	GetKeySet(self, keySetName)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	612	618	IdleConf.IsCoreBinding	IsCoreBinding(self, virtualEvent)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	630	726	IdleConf.GetCoreKeys	GetCoreKeys(self, keySetName=None)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	728	758	IdleConf.GetExtraHelpSourceList	GetExtraHelpSourceList(self, configSet)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	760	767	IdleConf.GetAllExtraHelpSourcesList	GetAllExtraHelpSourcesList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	769	793	IdleConf.GetFont	GetFont(self, root, configType, section)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	795	809	IdleConf.LoadCfgFiles	LoadCfgFiles(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	811	820	IdleConf.file_load_error_message	file_load_error_message(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	822	825	IdleConf.SaveUserCfgFiles	SaveUserCfgFiles(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	831	838	_warn	_warn(msg, *key)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	860	865	ConfigChanges.__init__	__init__(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	867	873	ConfigChanges.add_option	add_option(self, config_type, section, item, value)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	876	886	ConfigChanges.save_option	save_option(config_type, section, item, value)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	888	916	ConfigChanges.save_all	save_all(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	918	927	ConfigChanges.delete_section	delete_section(self, config_type, section)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	929	936	ConfigChanges.clear	clear(self)	excluded		platform: GUI toolkit
-Lib/idlelib/config.py	940	967	_dump	_dump()	excluded		platform: GUI toolkit
+Lib/idlelib/config.py	43	48	IdleConfParser.__init__	__init__(self, cfgFile, cfgDefaults=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	50	65	IdleConfParser.Get	Get(self, section, option, type=None, default=None, raw=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	67	72	IdleConfParser.GetOptionList	GetOptionList(self, section)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	74	78	IdleConfParser.Load	Load(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	85	100	IdleUserConfParser.SetOption	SetOption(self, section, option, value)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	102	109	IdleUserConfParser.RemoveOption	RemoveOption(self, section, option)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	111	114	IdleUserConfParser.AddSection	AddSection(self, section)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	116	120	IdleUserConfParser.RemoveEmptySections	RemoveEmptySections(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	122	125	IdleUserConfParser.IsEmpty	IsEmpty(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	127	144	IdleUserConfParser.Save	Save(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	157	169	IdleConf.__init__	__init__(self, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	171	179	IdleConf.CreateConfigHandlers	CreateConfigHandlers(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	181	215	IdleConf.GetUserCfgDir	GetUserCfgDir(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	217	255	IdleConf.GetOption	GetOption(self, configType, section, option, default=None, type=None, warn_on_default=True, raw=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	257	259	IdleConf.SetOption	SetOption(self, configType, section, option, value)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	261	275	IdleConf.GetSectionList	GetSectionList(self, configSet, configType)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	277	290	IdleConf.GetHighlight	GetHighlight(self, theme, element)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	292	358	IdleConf.GetThemeDict	GetThemeDict(self, type, themeName)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	360	362	IdleConf.CurrentTheme	CurrentTheme(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	364	366	IdleConf.CurrentKeys	CurrentKeys(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	368	404	IdleConf.current_colors_and_keys	current_colors_and_keys(self, section)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	407	413	IdleConf.default_keys	default_keys()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	415	454	IdleConf.GetExtensions	GetExtensions(self, active_only=True, editor_only=False, shell_only=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	456	458	IdleConf.RemoveKeyBindNames	RemoveKeyBindNames(self, extnNameList)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	460	472	IdleConf.GetExtnNameForEvent	GetExtnNameForEvent(self, virtualEvent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	474	501	IdleConf.GetExtensionKeys	GetExtensionKeys(self, extensionName)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	503	532	IdleConf.__GetRawExtensionKeys	__GetRawExtensionKeys(self, extension_name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	534	564	IdleConf.GetExtensionBindings	GetExtensionBindings(self, extensionName)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	566	575	IdleConf.GetKeyBinding	GetKeyBinding(self, keySetName, eventStr)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	577	592	IdleConf.GetCurrentKeySet	GetCurrentKeySet(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	594	610	IdleConf.GetKeySet	GetKeySet(self, keySetName)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	612	618	IdleConf.IsCoreBinding	IsCoreBinding(self, virtualEvent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	630	726	IdleConf.GetCoreKeys	GetCoreKeys(self, keySetName=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	728	758	IdleConf.GetExtraHelpSourceList	GetExtraHelpSourceList(self, configSet)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	760	767	IdleConf.GetAllExtraHelpSourcesList	GetAllExtraHelpSourcesList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	769	793	IdleConf.GetFont	GetFont(self, root, configType, section)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	795	809	IdleConf.LoadCfgFiles	LoadCfgFiles(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	811	820	IdleConf.file_load_error_message	file_load_error_message(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	822	825	IdleConf.SaveUserCfgFiles	SaveUserCfgFiles(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	831	838	_warn	_warn(msg, *key)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	860	865	ConfigChanges.__init__	__init__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	867	873	ConfigChanges.add_option	add_option(self, config_type, section, item, value)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	876	886	ConfigChanges.save_option	save_option(config_type, section, item, value)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	888	916	ConfigChanges.save_all	save_all(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	918	927	ConfigChanges.delete_section	delete_section(self, config_type, section)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	929	936	ConfigChanges.clear	clear(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/config.py	940	967	_dump	_dump()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

@@ -1,17 +1,17 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/scrolledlist.py	11	37	ScrolledList.__init__	__init__(self, master, **options)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	39	40	ScrolledList.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	42	45	ScrolledList.clear	clear(self)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	47	51	ScrolledList.append	append(self, item)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	53	54	ScrolledList.get	get(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	56	61	ScrolledList.click_event	click_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	63	67	ScrolledList.double_click_event	double_click_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	71	79	ScrolledList.popup_event	popup_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	81	84	ScrolledList.make_menu	make_menu(self)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	86	97	ScrolledList.up_event	up_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	99	110	ScrolledList.down_event	down_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	112	117	ScrolledList.select	select(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	121	122	ScrolledList.fill_menu	fill_menu(self)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	124	125	ScrolledList.on_select	on_select(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	127	128	ScrolledList.on_double	on_double(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/scrolledlist.py	131	143	_scrolled_list	_scrolled_list(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/scrolledlist.py	11	37	ScrolledList.__init__	__init__(self, master, **options)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	39	40	ScrolledList.close	close(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	42	45	ScrolledList.clear	clear(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	47	51	ScrolledList.append	append(self, item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	53	54	ScrolledList.get	get(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	56	61	ScrolledList.click_event	click_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	63	67	ScrolledList.double_click_event	double_click_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	71	79	ScrolledList.popup_event	popup_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	81	84	ScrolledList.make_menu	make_menu(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	86	97	ScrolledList.up_event	up_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	99	110	ScrolledList.down_event	down_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	112	117	ScrolledList.select	select(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	121	122	ScrolledList.fill_menu	fill_menu(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	124	125	ScrolledList.on_select	on_select(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	127	128	ScrolledList.on_double	on_double(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/scrolledlist.py	131	143	_scrolled_list	_scrolled_list(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

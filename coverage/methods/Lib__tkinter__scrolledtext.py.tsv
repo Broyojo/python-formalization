@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tkinter/scrolledtext.py	21	39	ScrolledText.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/scrolledtext.py	41	42	ScrolledText.__str__	__str__(self)	excluded		platform: GUI toolkit
-Lib/tkinter/scrolledtext.py	45	52	example	example()	excluded		platform: GUI toolkit
+Lib/tkinter/scrolledtext.py	21	39	ScrolledText.__init__	__init__(self, master=None, **kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/scrolledtext.py	41	42	ScrolledText.__str__	__str__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/scrolledtext.py	45	52	example	example()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

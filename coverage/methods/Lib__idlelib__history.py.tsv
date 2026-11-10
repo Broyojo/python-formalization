@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/history.py	14	29	History.__init__	__init__(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/history.py	31	34	History.history_next	history_next(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/history.py	36	39	History.history_prev	history_prev(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/history.py	41	88	History.fetch	fetch(self, reverse)	excluded		platform: GUI toolkit
-Lib/idlelib/history.py	90	101	History.store	store(self, source)	excluded		platform: GUI toolkit
+Lib/idlelib/history.py	14	29	History.__init__	__init__(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/history.py	31	34	History.history_next	history_next(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/history.py	36	39	History.history_prev	history_prev(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/history.py	41	88	History.fetch	fetch(self, reverse)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/history.py	90	101	History.store	store(self, source)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

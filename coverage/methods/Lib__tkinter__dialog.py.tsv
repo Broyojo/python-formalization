@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tkinter/dialog.py	15	26	Dialog.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/dialog.py	28	29	Dialog.destroy	destroy(self)	excluded		platform: GUI toolkit
-Lib/tkinter/dialog.py	32	44	_test	_test()	excluded		platform: GUI toolkit
+Lib/tkinter/dialog.py	15	26	Dialog.__init__	__init__(self, master=None, cnf={}, **kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dialog.py	28	29	Dialog.destroy	destroy(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dialog.py	32	44	_test	_test()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

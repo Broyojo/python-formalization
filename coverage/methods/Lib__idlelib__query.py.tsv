@@ -1,24 +1,24 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/query.py	39	88	Query.__init__	__init__(self, parent, title, message, *, text0='', used_names={}, _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	90	124	Query.create_widgets	create_widgets(self, ok_text='OK')	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	126	126	Query.create_extra	create_extra(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	128	130	Query.showerror	showerror(self, message, widget=None)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	132	138	Query.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	140	152	Query.ok	ok(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	154	157	Query.cancel	cancel(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	159	161	Query.destroy	destroy(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	168	171	SectionName.__init__	__init__(self, parent, title, message, used_names, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	173	185	SectionName.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	192	195	ModuleName.__init__	__init__(self, parent, title, message, text0, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	197	227	ModuleName.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	234	243	Goto.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	250	261	HelpSource.__init__	__init__(self, parent, title, *, menuitem='', filepath='', used_names={}, _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	263	281	HelpSource.create_extra	create_extra(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	283	288	HelpSource.askfilename	askfilename(self, filetypes, initdir, initfile)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	290	308	HelpSource.browse_file	browse_file(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	312	327	HelpSource.path_ok	path_ok(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	329	334	HelpSource.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	345	354	CustomRun.__init__	__init__(self, parent, title, *, cli_args=[], _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	356	367	CustomRun.create_extra	create_extra(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	369	377	CustomRun.cli_args_ok	cli_args_ok(self)	excluded		platform: GUI toolkit
-Lib/idlelib/query.py	379	383	CustomRun.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	39	88	Query.__init__	__init__(self, parent, title, message, *, text0='', used_names={}, _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	90	124	Query.create_widgets	create_widgets(self, ok_text='OK')	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	126	126	Query.create_extra	create_extra(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	128	130	Query.showerror	showerror(self, message, widget=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	132	138	Query.entry_ok	entry_ok(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	140	152	Query.ok	ok(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	154	157	Query.cancel	cancel(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	159	161	Query.destroy	destroy(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	168	171	SectionName.__init__	__init__(self, parent, title, message, used_names, *, _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	173	185	SectionName.entry_ok	entry_ok(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	192	195	ModuleName.__init__	__init__(self, parent, title, message, text0, *, _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	197	227	ModuleName.entry_ok	entry_ok(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	234	243	Goto.entry_ok	entry_ok(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	250	261	HelpSource.__init__	__init__(self, parent, title, *, menuitem='', filepath='', used_names={}, _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	263	281	HelpSource.create_extra	create_extra(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	283	288	HelpSource.askfilename	askfilename(self, filetypes, initdir, initfile)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	290	308	HelpSource.browse_file	browse_file(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	312	327	HelpSource.path_ok	path_ok(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	329	334	HelpSource.entry_ok	entry_ok(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	345	354	CustomRun.__init__	__init__(self, parent, title, *, cli_args=[], _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	356	367	CustomRun.create_extra	create_extra(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	369	377	CustomRun.cli_args_ok	cli_args_ok(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/query.py	379	383	CustomRun.entry_ok	entry_ok(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/search.py	12	25	_setup	_setup(text)	excluded		platform: GUI toolkit
-Lib/idlelib/search.py	27	36	find	find(text)	excluded		platform: GUI toolkit
-Lib/idlelib/search.py	38	47	find_again	find_again(text)	excluded		platform: GUI toolkit
-Lib/idlelib/search.py	49	59	find_selection	find_selection(text)	excluded		platform: GUI toolkit
-Lib/idlelib/search.py	65	69	SearchDialog.create_widgets	create_widgets(self)	excluded		platform: GUI toolkit
-Lib/idlelib/search.py	71	75	SearchDialog.default_command	default_command(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/search.py	77	119	SearchDialog.find_again	find_again(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/search.py	121	132	SearchDialog.find_selection	find_selection(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/search.py	135	157	_search_dialog	_search_dialog(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/search.py	12	25	_setup	_setup(text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/search.py	27	36	find	find(text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/search.py	38	47	find_again	find_again(text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/search.py	49	59	find_selection	find_selection(text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/search.py	65	69	SearchDialog.create_widgets	create_widgets(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/search.py	71	75	SearchDialog.default_command	default_command(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/search.py	77	119	SearchDialog.find_again	find_again(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/search.py	121	132	SearchDialog.find_selection	find_selection(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/search.py	135	157	_search_dialog	_search_dialog(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

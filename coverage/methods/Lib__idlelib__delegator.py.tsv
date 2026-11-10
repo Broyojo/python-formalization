@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/delegator.py	3	5	Delegator.__init__	__init__(self, delegate=None)	excluded		platform: GUI toolkit
-Lib/idlelib/delegator.py	9	13	Delegator.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/delegator.py	15	24	Delegator.resetcache	resetcache(self)	excluded		platform: GUI toolkit
-Lib/idlelib/delegator.py	26	29	Delegator.setdelegate	setdelegate(self, delegate)	excluded		platform: GUI toolkit
+Lib/idlelib/delegator.py	3	5	Delegator.__init__	__init__(self, delegate=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/delegator.py	9	13	Delegator.__getattr__	__getattr__(self, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/delegator.py	15	24	Delegator.resetcache	resetcache(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/delegator.py	26	29	Delegator.setdelegate	setdelegate(self, delegate)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

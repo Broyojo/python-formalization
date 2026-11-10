@@ -1,15 +1,15 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/stackviewer.py	11	19	StackBrowser	StackBrowser(root, exc, flist=None, top=None)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	24	27	StackTreeItem.__init__	__init__(self, exc, flist=None)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	29	36	StackTreeItem.get_stack	get_stack(self, tb)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	38	39	StackTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	41	46	StackTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	51	53	FrameTreeItem.__init__	__init__(self, info, flist)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	55	71	FrameTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	73	81	FrameTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	83	88	FrameTreeItem.OnDoubleClick	OnDoubleClick(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	93	94	VariablesTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	96	97	VariablesTreeItem.GetLabelText	GetLabelText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	99	100	VariablesTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	102	113	VariablesTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/stackviewer.py	116	126	_stackbrowser	_stackbrowser(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/stackviewer.py	11	19	StackBrowser	StackBrowser(root, exc, flist=None, top=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	24	27	StackTreeItem.__init__	__init__(self, exc, flist=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	29	36	StackTreeItem.get_stack	get_stack(self, tb)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	38	39	StackTreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	41	46	StackTreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	51	53	FrameTreeItem.__init__	__init__(self, info, flist)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	55	71	FrameTreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	73	81	FrameTreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	83	88	FrameTreeItem.OnDoubleClick	OnDoubleClick(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	93	94	VariablesTreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	96	97	VariablesTreeItem.GetLabelText	GetLabelText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	99	100	VariablesTreeItem.IsExpandable	IsExpandable(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	102	113	VariablesTreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/stackviewer.py	116	126	_stackbrowser	_stackbrowser(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

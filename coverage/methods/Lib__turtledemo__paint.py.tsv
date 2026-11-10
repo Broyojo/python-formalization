@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/paint.py	18	24	switchupdown	switchupdown(x=0, y=0)	excluded		platform: GUI toolkit
-Lib/turtledemo/paint.py	26	29	changecolor	changecolor(x=0, y=0)	excluded		platform: GUI toolkit
-Lib/turtledemo/paint.py	31	43	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/paint.py	18	24	switchupdown	switchupdown(x=0, y=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/paint.py	26	29	changecolor	changecolor(x=0, y=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/paint.py	31	43	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

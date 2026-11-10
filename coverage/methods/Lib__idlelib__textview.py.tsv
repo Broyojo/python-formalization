@@ -1,11 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/textview.py	17	22	AutoHideScrollbar.set	set(self, lo, hi)	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	24	25	AutoHideScrollbar.pack	pack(self, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	27	28	AutoHideScrollbar.place	place(self, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	34	69	ScrollableTextFrame.__init__	__init__(self, master, wrap=NONE, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	74	98	ViewFrame.__init__	__init__(self, parent, contents, wrap='word')	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	100	102	ViewFrame.ok	ok(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	108	139	ViewWindow.__init__	__init__(self, parent, title, contents, modal=True, wrap=WORD, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	141	145	ViewWindow.ok	ok(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	148	159	view_text	view_text(parent, title, contents, modal=True, wrap='word', _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/textview.py	162	183	view_file	view_file(parent, title, filename, encoding, modal=True, wrap='word', _utest=False)	excluded		platform: GUI toolkit
+Lib/idlelib/textview.py	17	22	AutoHideScrollbar.set	set(self, lo, hi)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	24	25	AutoHideScrollbar.pack	pack(self, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	27	28	AutoHideScrollbar.place	place(self, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	34	69	ScrollableTextFrame.__init__	__init__(self, master, wrap=NONE, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	74	98	ViewFrame.__init__	__init__(self, parent, contents, wrap='word')	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	100	102	ViewFrame.ok	ok(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	108	139	ViewWindow.__init__	__init__(self, parent, title, contents, modal=True, wrap=WORD, *, _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	141	145	ViewWindow.ok	ok(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	148	159	view_text	view_text(parent, title, contents, modal=True, wrap='word', _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/textview.py	162	183	view_file	view_file(parent, title, filename, encoding, modal=True, wrap='word', _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

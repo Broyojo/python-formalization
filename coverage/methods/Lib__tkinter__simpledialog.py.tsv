@@ -1,29 +1,29 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tkinter/simpledialog.py	36	66	SimpleDialog.__init__	__init__(self, master, text='', buttons=[], default=None, cancel=None, title=None, class_=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	68	73	SimpleDialog.go	go(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	75	79	SimpleDialog.return_event	return_event(self, event)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	81	85	SimpleDialog.wm_delete_window	wm_delete_window(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	87	89	SimpleDialog.done	done(self, num)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	99	148	Dialog.__init__	__init__(self, parent, title=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	150	154	Dialog.destroy	destroy(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	159	166	Dialog.body	body(self, master)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	168	184	Dialog.buttonbox	buttonbox(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	189	201	Dialog.ok	ok(self, event=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	203	208	Dialog.cancel	cancel(self, event=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	213	220	Dialog.validate	validate(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	222	229	Dialog.apply	apply(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	234	260	_place_window	_place_window(w, parent=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	263	271	_setup_dialog	_setup_dialog(w)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	278	289	_QueryDialog.__init__	__init__(self, title, prompt, initialvalue=None, minvalue=None, maxvalue=None, parent=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	291	293	_QueryDialog.destroy	destroy(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	295	307	_QueryDialog.body	body(self, master)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	309	340	_QueryDialog.validate	validate(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	346	347	_QueryInteger.getresult	getresult(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	350	362	askinteger	askinteger(title, prompt, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	368	369	_QueryFloat.getresult	getresult(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	372	384	askfloat	askfloat(title, prompt, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	388	394	_QueryString.__init__	__init__(self, *args, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	396	400	_QueryString.body	body(self, master)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	402	403	_QueryString.getresult	getresult(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	406	418	askstring	askstring(title, prompt, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	423	445	test	test()	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	36	66	SimpleDialog.__init__	__init__(self, master, text='', buttons=[], default=None, cancel=None, title=None, class_=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	68	73	SimpleDialog.go	go(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	75	79	SimpleDialog.return_event	return_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	81	85	SimpleDialog.wm_delete_window	wm_delete_window(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	87	89	SimpleDialog.done	done(self, num)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	99	148	Dialog.__init__	__init__(self, parent, title=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	150	154	Dialog.destroy	destroy(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	159	166	Dialog.body	body(self, master)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	168	184	Dialog.buttonbox	buttonbox(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	189	201	Dialog.ok	ok(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	203	208	Dialog.cancel	cancel(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	213	220	Dialog.validate	validate(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	222	229	Dialog.apply	apply(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	234	260	_place_window	_place_window(w, parent=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	263	271	_setup_dialog	_setup_dialog(w)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	278	289	_QueryDialog.__init__	__init__(self, title, prompt, initialvalue=None, minvalue=None, maxvalue=None, parent=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	291	293	_QueryDialog.destroy	destroy(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	295	307	_QueryDialog.body	body(self, master)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	309	340	_QueryDialog.validate	validate(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	346	347	_QueryInteger.getresult	getresult(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	350	362	askinteger	askinteger(title, prompt, **kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	368	369	_QueryFloat.getresult	getresult(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	372	384	askfloat	askfloat(title, prompt, **kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	388	394	_QueryString.__init__	__init__(self, *args, **kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	396	400	_QueryString.body	body(self, master)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	402	403	_QueryString.getresult	getresult(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	406	418	askstring	askstring(title, prompt, **kw)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/simpledialog.py	423	445	test	test()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

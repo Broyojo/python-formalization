@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/lindenmayer.py	27	33	replace	replace(seq, replacementRules, n)	excluded		platform: GUI toolkit
-Lib/turtledemo/lindenmayer.py	35	43	draw	draw(commands, rules)	excluded		platform: GUI toolkit
-Lib/turtledemo/lindenmayer.py	46	111	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/lindenmayer.py	27	33	replace	replace(seq, replacementRules, n)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/lindenmayer.py	35	43	draw	draw(commands, rules)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/lindenmayer.py	46	111	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

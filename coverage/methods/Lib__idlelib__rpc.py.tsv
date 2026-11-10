@@ -1,53 +1,53 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/rpc.py	45	49	unpickle_code	unpickle_code(ms)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	51	55	pickle_code	pickle_code(co)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	57	63	dumps	dumps(obj, protocol=None)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	75	78	RPCServer.__init__	__init__(self, addr, handlerclass=None)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	80	82	RPCServer.server_bind	server_bind(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	84	91	RPCServer.server_activate	server_activate(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	93	95	RPCServer.get_request	get_request(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	97	119	RPCServer.handle_error	handle_error(self, request, client_address)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	132	147	SocketIO.__init__	__init__(self, sock, objtable=None, debugging=None)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	149	153	SocketIO.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	155	157	SocketIO.exithook	exithook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	159	165	SocketIO.debug	debug(self, *args)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	167	168	SocketIO.register	register(self, oid, object_)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	170	174	SocketIO.unregister	unregister(self, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	176	220	SocketIO.localcall	localcall(self, seq, request)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	222	225	SocketIO.remotecall	remotecall(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	227	230	SocketIO.remotequeue	remotequeue(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	232	240	SocketIO.asynccall	asynccall(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	242	250	SocketIO.asyncqueue	asyncqueue(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	252	256	SocketIO.asyncreturn	asyncreturn(self, seq)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	258	277	SocketIO.decoderesponse	decoderesponse(self, response)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	279	281	SocketIO.decode_interrupthook	decode_interrupthook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	283	294	SocketIO.mainloop	mainloop(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	296	302	SocketIO.getresponse	getresponse(self, myseq, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	304	310	SocketIO._proxify	_proxify(self, obj)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	312	337	SocketIO._getresponse	_getresponse(self, myseq, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	339	341	SocketIO.newseq	newseq(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	343	358	SocketIO.putmessage	putmessage(self, message)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	360	374	SocketIO.pollpacket	pollpacket(self, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	376	381	SocketIO._stage0	_stage0(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	383	389	SocketIO._stage1	_stage1(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	391	403	SocketIO.pollmessage	pollmessage(self, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	405	476	SocketIO.pollresponse	pollresponse(self, myseq, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	478	489	SocketIO.handle_EOF	handle_EOF(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	491	493	SocketIO.EOFhook	EOFhook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	502	505	remoteref	remoteref(obj)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	510	511	RemoteProxy.__init__	__init__(self, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	519	522	RPCHandler.__init__	__init__(self, sock, addr, svr)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	524	526	RPCHandler.handle	handle(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	528	529	RPCHandler.get_remote_proxy	get_remote_proxy(self, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	539	542	RPCClient.__init__	__init__(self, address, family=socket.AF_INET, type=socket.SOCK_STREAM)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	544	552	RPCClient.accept	accept(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	554	555	RPCClient.get_remote_proxy	get_remote_proxy(self, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	563	565	RPCProxy.__init__	__init__(self, sockio, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	567	579	RPCProxy.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	581	583	RPCProxy.__getattributes	__getattributes(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	585	587	RPCProxy.__getmethods	__getmethods(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	589	598	_getmethods	_getmethods(obj, methods)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	600	604	_getattributes	_getattributes(obj, attributes)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	609	612	MethodProxy.__init__	__init__(self, sockio, oid, name)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	614	616	MethodProxy.__call__	__call__(self, /, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	622	638	displayhook	displayhook(value)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	45	49	unpickle_code	unpickle_code(ms)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	51	55	pickle_code	pickle_code(co)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	57	63	dumps	dumps(obj, protocol=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	75	78	RPCServer.__init__	__init__(self, addr, handlerclass=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	80	82	RPCServer.server_bind	server_bind(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	84	91	RPCServer.server_activate	server_activate(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	93	95	RPCServer.get_request	get_request(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	97	119	RPCServer.handle_error	handle_error(self, request, client_address)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	132	147	SocketIO.__init__	__init__(self, sock, objtable=None, debugging=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	149	153	SocketIO.close	close(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	155	157	SocketIO.exithook	exithook(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	159	165	SocketIO.debug	debug(self, *args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	167	168	SocketIO.register	register(self, oid, object_)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	170	174	SocketIO.unregister	unregister(self, oid)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	176	220	SocketIO.localcall	localcall(self, seq, request)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	222	225	SocketIO.remotecall	remotecall(self, oid, methodname, args, kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	227	230	SocketIO.remotequeue	remotequeue(self, oid, methodname, args, kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	232	240	SocketIO.asynccall	asynccall(self, oid, methodname, args, kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	242	250	SocketIO.asyncqueue	asyncqueue(self, oid, methodname, args, kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	252	256	SocketIO.asyncreturn	asyncreturn(self, seq)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	258	277	SocketIO.decoderesponse	decoderesponse(self, response)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	279	281	SocketIO.decode_interrupthook	decode_interrupthook(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	283	294	SocketIO.mainloop	mainloop(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	296	302	SocketIO.getresponse	getresponse(self, myseq, wait)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	304	310	SocketIO._proxify	_proxify(self, obj)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	312	337	SocketIO._getresponse	_getresponse(self, myseq, wait)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	339	341	SocketIO.newseq	newseq(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	343	358	SocketIO.putmessage	putmessage(self, message)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	360	374	SocketIO.pollpacket	pollpacket(self, wait)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	376	381	SocketIO._stage0	_stage0(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	383	389	SocketIO._stage1	_stage1(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	391	403	SocketIO.pollmessage	pollmessage(self, wait)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	405	476	SocketIO.pollresponse	pollresponse(self, myseq, wait)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	478	489	SocketIO.handle_EOF	handle_EOF(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	491	493	SocketIO.EOFhook	EOFhook(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	502	505	remoteref	remoteref(obj)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	510	511	RemoteProxy.__init__	__init__(self, oid)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	519	522	RPCHandler.__init__	__init__(self, sock, addr, svr)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	524	526	RPCHandler.handle	handle(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	528	529	RPCHandler.get_remote_proxy	get_remote_proxy(self, oid)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	539	542	RPCClient.__init__	__init__(self, address, family=socket.AF_INET, type=socket.SOCK_STREAM)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	544	552	RPCClient.accept	accept(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	554	555	RPCClient.get_remote_proxy	get_remote_proxy(self, oid)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	563	565	RPCProxy.__init__	__init__(self, sockio, oid)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	567	579	RPCProxy.__getattr__	__getattr__(self, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	581	583	RPCProxy.__getattributes	__getattributes(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	585	587	RPCProxy.__getmethods	__getmethods(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	589	598	_getmethods	_getmethods(obj, methods)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	600	604	_getattributes	_getattributes(obj, attributes)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	609	612	MethodProxy.__init__	__init__(self, sockio, oid, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	614	616	MethodProxy.__call__	__call__(self, /, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/rpc.py	622	638	displayhook	displayhook(value)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

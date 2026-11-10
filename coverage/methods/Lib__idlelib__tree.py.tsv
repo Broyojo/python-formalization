@@ -1,48 +1,48 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/tree.py	38	58	listicons	listicons(icondir=ICONDIR)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	65	73	TreeNode.__init__	__init__(self, canvas, parent, item)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	75	79	TreeNode.destroy	destroy(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	81	91	TreeNode.geticonimage	geticonimage(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	93	100	TreeNode.select	select(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	102	108	TreeNode.deselect	deselect(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	110	114	TreeNode.deselectall	deselectall(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	116	120	TreeNode.deselecttree	deselecttree(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	122	128	TreeNode.flip	flip(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	130	136	TreeNode.expand	expand(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	138	141	TreeNode.collapse	collapse(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	143	158	TreeNode.view	view(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	160	164	TreeNode.lastvisiblechild	lastvisiblechild(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	166	177	TreeNode.update	update(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	179	218	TreeNode.draw	draw(self, x, y)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	220	231	TreeNode.drawicon	drawicon(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	233	271	TreeNode.drawtext	drawtext(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	273	277	TreeNode.select_or_edit	select_or_edit(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	279	286	TreeNode.edit	edit(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	288	301	TreeNode.edit_finish	edit_finish(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	303	311	TreeNode.edit_cancel	edit_cancel(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	323	324	TreeItem.__init__	__init__(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	326	327	TreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	329	330	TreeItem.GetLabelText	GetLabelText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	334	338	TreeItem._IsExpandable	_IsExpandable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	340	342	TreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	344	351	TreeItem._GetSubList	_GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	353	354	TreeItem.IsEditable	IsEditable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	356	357	TreeItem.SetText	SetText(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	359	360	TreeItem.GetIconName	GetIconName(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	362	363	TreeItem.GetSelectedIconName	GetSelectedIconName(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	365	366	TreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	368	369	TreeItem.OnDoubleClick	OnDoubleClick(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	378	379	FileTreeItem.__init__	__init__(self, path)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	381	382	FileTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	384	385	FileTreeItem.IsEditable	IsEditable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	387	396	FileTreeItem.SetText	SetText(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	398	400	FileTreeItem.GetIconName	GetIconName(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	402	403	FileTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	405	415	FileTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	422	446	ScrolledCanvas.__init__	__init__(self, master, **opts)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	447	449	ScrolledCanvas.page_up	page_up(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	450	452	ScrolledCanvas.page_down	page_down(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	453	455	ScrolledCanvas.unit_up	unit_up(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	456	458	ScrolledCanvas.unit_down	unit_down(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	459	461	ScrolledCanvas.zoom_height	zoom_height(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/tree.py	464	472	_tree_widget	_tree_widget(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	38	58	listicons	listicons(icondir=ICONDIR)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	65	73	TreeNode.__init__	__init__(self, canvas, parent, item)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	75	79	TreeNode.destroy	destroy(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	81	91	TreeNode.geticonimage	geticonimage(self, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	93	100	TreeNode.select	select(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	102	108	TreeNode.deselect	deselect(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	110	114	TreeNode.deselectall	deselectall(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	116	120	TreeNode.deselecttree	deselecttree(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	122	128	TreeNode.flip	flip(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	130	136	TreeNode.expand	expand(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	138	141	TreeNode.collapse	collapse(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	143	158	TreeNode.view	view(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	160	164	TreeNode.lastvisiblechild	lastvisiblechild(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	166	177	TreeNode.update	update(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	179	218	TreeNode.draw	draw(self, x, y)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	220	231	TreeNode.drawicon	drawicon(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	233	271	TreeNode.drawtext	drawtext(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	273	277	TreeNode.select_or_edit	select_or_edit(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	279	286	TreeNode.edit	edit(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	288	301	TreeNode.edit_finish	edit_finish(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	303	311	TreeNode.edit_cancel	edit_cancel(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	323	324	TreeItem.__init__	__init__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	326	327	TreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	329	330	TreeItem.GetLabelText	GetLabelText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	334	338	TreeItem._IsExpandable	_IsExpandable(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	340	342	TreeItem.IsExpandable	IsExpandable(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	344	351	TreeItem._GetSubList	_GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	353	354	TreeItem.IsEditable	IsEditable(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	356	357	TreeItem.SetText	SetText(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	359	360	TreeItem.GetIconName	GetIconName(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	362	363	TreeItem.GetSelectedIconName	GetSelectedIconName(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	365	366	TreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	368	369	TreeItem.OnDoubleClick	OnDoubleClick(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	378	379	FileTreeItem.__init__	__init__(self, path)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	381	382	FileTreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	384	385	FileTreeItem.IsEditable	IsEditable(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	387	396	FileTreeItem.SetText	SetText(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	398	400	FileTreeItem.GetIconName	GetIconName(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	402	403	FileTreeItem.IsExpandable	IsExpandable(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	405	415	FileTreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	422	446	ScrolledCanvas.__init__	__init__(self, master, **opts)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	447	449	ScrolledCanvas.page_up	page_up(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	450	452	ScrolledCanvas.page_down	page_down(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	453	455	ScrolledCanvas.unit_up	unit_up(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	456	458	ScrolledCanvas.unit_down	unit_down(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	459	461	ScrolledCanvas.zoom_height	zoom_height(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/tree.py	464	472	_tree_widget	_tree_widget(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

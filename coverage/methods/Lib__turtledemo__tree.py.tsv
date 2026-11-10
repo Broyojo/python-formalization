@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/tree.py	18	34	tree	tree(plist, l, a, f)	excluded		platform: GUI toolkit
-Lib/turtledemo/tree.py	36	48	maketree	maketree()	excluded		platform: GUI toolkit
-Lib/turtledemo/tree.py	50	54	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/tree.py	18	34	tree	tree(plist, l, a, f)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/tree.py	36	48	maketree	maketree()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/tree.py	50	54	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

@@ -1,11 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/pathbrowser.py	11	18	PathBrowser.__init__	__init__(self, master, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	20	23	PathBrowser.settitle	settitle(self)	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	25	26	PathBrowser.rootnode	rootnode(self)	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	31	32	PathBrowserTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	34	39	PathBrowserTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	44	46	DirBrowserTreeItem.__init__	__init__(self, dir, packages=[])	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	48	52	DirBrowserTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	54	73	DirBrowserTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	75	80	DirBrowserTreeItem.ispackagedir	ispackagedir(self, file)	excluded		platform: GUI toolkit
-Lib/idlelib/pathbrowser.py	82	99	DirBrowserTreeItem.listmodules	listmodules(self, allnames)	excluded		platform: GUI toolkit
+Lib/idlelib/pathbrowser.py	11	18	PathBrowser.__init__	__init__(self, master, *, _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	20	23	PathBrowser.settitle	settitle(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	25	26	PathBrowser.rootnode	rootnode(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	31	32	PathBrowserTreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	34	39	PathBrowserTreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	44	46	DirBrowserTreeItem.__init__	__init__(self, dir, packages=[])	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	48	52	DirBrowserTreeItem.GetText	GetText(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	54	73	DirBrowserTreeItem.GetSubList	GetSubList(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	75	80	DirBrowserTreeItem.ispackagedir	ispackagedir(self, file)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/pathbrowser.py	82	99	DirBrowserTreeItem.listmodules	listmodules(self, allnames)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

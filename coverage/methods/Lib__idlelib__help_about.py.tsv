@@ -1,12 +1,12 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/help_about.py	26	58	AboutDialog.__init__	__init__(self, parent, title=None, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	60	147	AboutDialog.create_widgets	create_widgets(self)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	150	152	AboutDialog.show_py_license	show_py_license(self)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	154	156	AboutDialog.show_py_copyright	show_py_copyright(self)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	158	160	AboutDialog.show_py_credits	show_py_credits(self)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	164	166	AboutDialog.show_idle_credits	show_idle_credits(self)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	168	170	AboutDialog.show_readme	show_readme(self)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	172	174	AboutDialog.show_idle_news	show_idle_news(self)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	176	187	AboutDialog.display_printer_text	display_printer_text(self, title, printer)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	189	198	AboutDialog.display_file_text	display_file_text(self, title, filename, encoding=None)	excluded		platform: GUI toolkit
-Lib/idlelib/help_about.py	200	203	AboutDialog.ok	ok(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/help_about.py	26	58	AboutDialog.__init__	__init__(self, parent, title=None, *, _htest=False, _utest=False)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	60	147	AboutDialog.create_widgets	create_widgets(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	150	152	AboutDialog.show_py_license	show_py_license(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	154	156	AboutDialog.show_py_copyright	show_py_copyright(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	158	160	AboutDialog.show_py_credits	show_py_credits(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	164	166	AboutDialog.show_idle_credits	show_idle_credits(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	168	170	AboutDialog.show_readme	show_readme(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	172	174	AboutDialog.show_idle_news	show_idle_news(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	176	187	AboutDialog.display_printer_text	display_printer_text(self, title, printer)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	189	198	AboutDialog.display_file_text	display_file_text(self, title, filename, encoding=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/help_about.py	200	203	AboutDialog.ok	ok(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

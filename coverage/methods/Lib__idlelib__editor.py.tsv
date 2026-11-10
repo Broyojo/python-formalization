@@ -1,109 +1,109 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/editor.py	65	316	EditorWindow.__init__	__init__(self, flist=None, filename=None, key=None, root=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	318	319	EditorWindow.handle_winconfig	handle_winconfig(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	321	334	EditorWindow.set_width	set_width(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	336	339	EditorWindow.new_callback	new_callback(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	341	382	EditorWindow.home_callback	home_callback(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	384	398	EditorWindow.set_status_bar	set_status_bar(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	400	403	EditorWindow.set_line_and_column	set_line_and_column(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	435	470	EditorWindow.createmenubar	createmenubar(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	472	483	EditorWindow.postwindowsmenu	postwindowsmenu(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	485	488	EditorWindow.update_menu_label	update_menu_label(self, menu, index, label)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	490	493	EditorWindow.update_menu_state	update_menu_state(self, menu, index, state)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	495	504	EditorWindow.handle_yview	handle_yview(self, event, *args)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	508	541	EditorWindow.right_menu_event	right_menu_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	548	558	EditorWindow.make_rmenu	make_rmenu(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	560	561	EditorWindow.rmenu_check_cut	rmenu_check_cut(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	563	569	EditorWindow.rmenu_check_copy	rmenu_check_copy(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	571	577	EditorWindow.rmenu_check_paste	rmenu_check_paste(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	579	583	EditorWindow.about_dialog	about_dialog(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	585	589	EditorWindow.config_dialog	config_dialog(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	591	599	EditorWindow.help_dialog	help_dialog(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	601	610	EditorWindow.python_docs	python_docs(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	612	614	EditorWindow.cut	cut(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	616	621	EditorWindow.copy	copy(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	623	626	EditorWindow.paste	paste(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	628	632	EditorWindow.select_all	select_all(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	634	637	EditorWindow.remove_selection	remove_selection(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	639	657	EditorWindow.move_at_edge_if_selection	move_at_edge_if_selection(self, edge_index)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	659	661	EditorWindow.del_word_left	del_word_left(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	663	665	EditorWindow.del_word_right	del_word_right(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	667	669	EditorWindow.find_event	find_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	671	673	EditorWindow.find_again_event	find_again_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	675	677	EditorWindow.find_selection_event	find_selection_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	679	681	EditorWindow.find_in_files_event	find_in_files_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	683	685	EditorWindow.replace_event	replace_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	687	699	EditorWindow.goto_line_event	goto_line_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	701	723	EditorWindow.open_module	open_module(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	725	727	EditorWindow.open_module_event	open_module_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	729	738	EditorWindow.open_module_browser	open_module_browser(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	740	743	EditorWindow.open_path_browser	open_path_browser(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	745	752	EditorWindow.open_turtle_demo	open_turtle_demo(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	754	759	EditorWindow.gotoline	gotoline(self, lineno)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	761	768	EditorWindow.ispythonsource	ispythonsource(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	770	773	EditorWindow.close_hook	close_hook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	775	776	EditorWindow.set_close_hook	set_close_hook(self, close_hook)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	778	783	EditorWindow.filename_change_hook	filename_change_hook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	785	792	EditorWindow._addcolorizer	_addcolorizer(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	794	799	EditorWindow._rmcolorizer	_rmcolorizer(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	801	812	EditorWindow.ResetColorizer	ResetColorizer(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	816	825	EditorWindow.colorize_syntax_error	colorize_syntax_error(self, text, pos)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	827	835	EditorWindow.update_cursor_blink	update_cursor_blink(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	837	852	EditorWindow.ResetFont	ResetFont(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	854	866	EditorWindow.RemoveKeybindings	RemoveKeybindings(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	868	906	EditorWindow.ApplyKeybindings	ApplyKeybindings(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	908	913	EditorWindow.set_notabs_indentwidth	set_notabs_indentwidth(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	915	930	EditorWindow.reset_help_menu_entries	reset_help_menu_entries(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	932	945	EditorWindow._extra_help_callback	_extra_help_callback(self, resource)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	947	991	EditorWindow.update_recent_files_list	update_recent_files_list(self, new_file=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	993	996	EditorWindow.__recent_file_callback	__recent_file_callback(self, file_name)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	998	1027	EditorWindow.saved_change_hook	saved_change_hook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1029	1030	EditorWindow.get_saved	get_saved(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1032	1035	EditorWindow.set_saved	set_saved(self, flag)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1037	1038	EditorWindow.reset_undo	reset_undo(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1040	1042	EditorWindow.short_title	short_title(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1044	1045	EditorWindow.long_title	long_title(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1047	1049	EditorWindow.center_insert_event	center_insert_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1051	1057	EditorWindow.center	center(self, mark='insert')	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1059	1067	EditorWindow.getwindowlines	getwindowlines(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1069	1071	EditorWindow.getlineno	getlineno(self, mark='insert')	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1073	1077	EditorWindow.get_geometry	get_geometry(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1079	1081	EditorWindow.close_event	close_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1083	1090	EditorWindow.maybesave	maybesave(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1092	1099	EditorWindow.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1101	1119	EditorWindow._close	_close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1121	1129	EditorWindow.last_mtime	last_mtime(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1131	1145	EditorWindow.focus_in_event	focus_in_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1147	1165	EditorWindow.deleted_file_event	deleted_file_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1167	1169	EditorWindow.load_extensions	load_extensions(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1171	1175	EditorWindow.unload_extensions	unload_extensions(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1177	1183	EditorWindow.load_standard_extensions	load_standard_extensions(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1185	1186	EditorWindow.get_standard_extension_names	get_standard_extension_names(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1192	1213	EditorWindow.load_extension	load_extension(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1215	1229	EditorWindow.apply_bindings	apply_bindings(self, keydefs=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1231	1267	EditorWindow.fill_menus	fill_menus(self, menudefs=None, keydefs=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1269	1275	EditorWindow.getvar	getvar(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1277	1282	EditorWindow.setvar	setvar(self, name, value, vartype=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1284	1291	EditorWindow.get_var_obj	get_var_obj(self, eventname, vartype=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1302	1310	EditorWindow.is_char_in_string	is_char_in_string(self, text_index)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1314	1320	EditorWindow.get_selection_indices	get_selection_indices(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1325	1327	EditorWindow.get_tk_tabwidth	get_tk_tabwidth(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1331	1338	EditorWindow.set_tk_tabwidth	set_tk_tabwidth(self, newtabwidth)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1342	1349	EditorWindow.set_indentation_params	set_indentation_params(self, is_py_src, guess=True)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1351	1392	EditorWindow.smart_backspace_event	smart_backspace_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1394	1427	EditorWindow.smart_indent_event	smart_indent_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1429	1542	EditorWindow.newline_and_indent_event	newline_and_indent_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1549	1553	EditorWindow._build_char_in_string_func	_build_char_in_string_func(self, startindex)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1565	1570	EditorWindow._make_blanks	_make_blanks(self, n)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1575	1583	EditorWindow.reindent_to	reindent_to(self, column)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1590	1597	EditorWindow.guess_indent	guess_indent(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1599	1610	EditorWindow.toggle_line_numbers_event	toggle_line_numbers_event(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1613	1614	index2line	index2line(index)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1618	1625	get_line_indent	get_line_indent(line, tabwidth)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1631	1634	IndentSearcher.__init__	__init__(self, text)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1636	1643	IndentSearcher.readline	readline(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1645	1656	IndentSearcher.tokeneater	tokeneater(self, type, token, start, end, line, INDENT=tokenize.INDENT, NAME=tokenize.NAME, OPENERS=('class', 'def', 'for', 'if', 'match', 'try', 'while', 'with'))	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1658	1670	IndentSearcher.run	run(self)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1675	1689	prepstr	prepstr(s)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1698	1738	get_accelerator	get_accelerator(keydefs, eventname)	excluded		platform: GUI toolkit
-Lib/idlelib/editor.py	1741	1754	_editor_window	_editor_window(root)	excluded		platform: GUI toolkit
+Lib/idlelib/editor.py	65	316	EditorWindow.__init__	__init__(self, flist=None, filename=None, key=None, root=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	318	319	EditorWindow.handle_winconfig	handle_winconfig(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	321	334	EditorWindow.set_width	set_width(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	336	339	EditorWindow.new_callback	new_callback(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	341	382	EditorWindow.home_callback	home_callback(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	384	398	EditorWindow.set_status_bar	set_status_bar(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	400	403	EditorWindow.set_line_and_column	set_line_and_column(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	435	470	EditorWindow.createmenubar	createmenubar(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	472	483	EditorWindow.postwindowsmenu	postwindowsmenu(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	485	488	EditorWindow.update_menu_label	update_menu_label(self, menu, index, label)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	490	493	EditorWindow.update_menu_state	update_menu_state(self, menu, index, state)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	495	504	EditorWindow.handle_yview	handle_yview(self, event, *args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	508	541	EditorWindow.right_menu_event	right_menu_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	548	558	EditorWindow.make_rmenu	make_rmenu(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	560	561	EditorWindow.rmenu_check_cut	rmenu_check_cut(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	563	569	EditorWindow.rmenu_check_copy	rmenu_check_copy(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	571	577	EditorWindow.rmenu_check_paste	rmenu_check_paste(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	579	583	EditorWindow.about_dialog	about_dialog(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	585	589	EditorWindow.config_dialog	config_dialog(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	591	599	EditorWindow.help_dialog	help_dialog(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	601	610	EditorWindow.python_docs	python_docs(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	612	614	EditorWindow.cut	cut(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	616	621	EditorWindow.copy	copy(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	623	626	EditorWindow.paste	paste(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	628	632	EditorWindow.select_all	select_all(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	634	637	EditorWindow.remove_selection	remove_selection(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	639	657	EditorWindow.move_at_edge_if_selection	move_at_edge_if_selection(self, edge_index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	659	661	EditorWindow.del_word_left	del_word_left(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	663	665	EditorWindow.del_word_right	del_word_right(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	667	669	EditorWindow.find_event	find_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	671	673	EditorWindow.find_again_event	find_again_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	675	677	EditorWindow.find_selection_event	find_selection_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	679	681	EditorWindow.find_in_files_event	find_in_files_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	683	685	EditorWindow.replace_event	replace_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	687	699	EditorWindow.goto_line_event	goto_line_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	701	723	EditorWindow.open_module	open_module(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	725	727	EditorWindow.open_module_event	open_module_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	729	738	EditorWindow.open_module_browser	open_module_browser(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	740	743	EditorWindow.open_path_browser	open_path_browser(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	745	752	EditorWindow.open_turtle_demo	open_turtle_demo(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	754	759	EditorWindow.gotoline	gotoline(self, lineno)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	761	768	EditorWindow.ispythonsource	ispythonsource(self, filename)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	770	773	EditorWindow.close_hook	close_hook(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	775	776	EditorWindow.set_close_hook	set_close_hook(self, close_hook)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	778	783	EditorWindow.filename_change_hook	filename_change_hook(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	785	792	EditorWindow._addcolorizer	_addcolorizer(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	794	799	EditorWindow._rmcolorizer	_rmcolorizer(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	801	812	EditorWindow.ResetColorizer	ResetColorizer(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	816	825	EditorWindow.colorize_syntax_error	colorize_syntax_error(self, text, pos)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	827	835	EditorWindow.update_cursor_blink	update_cursor_blink(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	837	852	EditorWindow.ResetFont	ResetFont(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	854	866	EditorWindow.RemoveKeybindings	RemoveKeybindings(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	868	906	EditorWindow.ApplyKeybindings	ApplyKeybindings(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	908	913	EditorWindow.set_notabs_indentwidth	set_notabs_indentwidth(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	915	930	EditorWindow.reset_help_menu_entries	reset_help_menu_entries(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	932	945	EditorWindow._extra_help_callback	_extra_help_callback(self, resource)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	947	991	EditorWindow.update_recent_files_list	update_recent_files_list(self, new_file=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	993	996	EditorWindow.__recent_file_callback	__recent_file_callback(self, file_name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	998	1027	EditorWindow.saved_change_hook	saved_change_hook(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1029	1030	EditorWindow.get_saved	get_saved(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1032	1035	EditorWindow.set_saved	set_saved(self, flag)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1037	1038	EditorWindow.reset_undo	reset_undo(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1040	1042	EditorWindow.short_title	short_title(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1044	1045	EditorWindow.long_title	long_title(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1047	1049	EditorWindow.center_insert_event	center_insert_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1051	1057	EditorWindow.center	center(self, mark='insert')	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1059	1067	EditorWindow.getwindowlines	getwindowlines(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1069	1071	EditorWindow.getlineno	getlineno(self, mark='insert')	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1073	1077	EditorWindow.get_geometry	get_geometry(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1079	1081	EditorWindow.close_event	close_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1083	1090	EditorWindow.maybesave	maybesave(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1092	1099	EditorWindow.close	close(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1101	1119	EditorWindow._close	_close(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1121	1129	EditorWindow.last_mtime	last_mtime(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1131	1145	EditorWindow.focus_in_event	focus_in_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1147	1165	EditorWindow.deleted_file_event	deleted_file_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1167	1169	EditorWindow.load_extensions	load_extensions(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1171	1175	EditorWindow.unload_extensions	unload_extensions(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1177	1183	EditorWindow.load_standard_extensions	load_standard_extensions(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1185	1186	EditorWindow.get_standard_extension_names	get_standard_extension_names(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1192	1213	EditorWindow.load_extension	load_extension(self, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1215	1229	EditorWindow.apply_bindings	apply_bindings(self, keydefs=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1231	1267	EditorWindow.fill_menus	fill_menus(self, menudefs=None, keydefs=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1269	1275	EditorWindow.getvar	getvar(self, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1277	1282	EditorWindow.setvar	setvar(self, name, value, vartype=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1284	1291	EditorWindow.get_var_obj	get_var_obj(self, eventname, vartype=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1302	1310	EditorWindow.is_char_in_string	is_char_in_string(self, text_index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1314	1320	EditorWindow.get_selection_indices	get_selection_indices(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1325	1327	EditorWindow.get_tk_tabwidth	get_tk_tabwidth(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1331	1338	EditorWindow.set_tk_tabwidth	set_tk_tabwidth(self, newtabwidth)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1342	1349	EditorWindow.set_indentation_params	set_indentation_params(self, is_py_src, guess=True)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1351	1392	EditorWindow.smart_backspace_event	smart_backspace_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1394	1427	EditorWindow.smart_indent_event	smart_indent_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1429	1542	EditorWindow.newline_and_indent_event	newline_and_indent_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1549	1553	EditorWindow._build_char_in_string_func	_build_char_in_string_func(self, startindex)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1565	1570	EditorWindow._make_blanks	_make_blanks(self, n)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1575	1583	EditorWindow.reindent_to	reindent_to(self, column)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1590	1597	EditorWindow.guess_indent	guess_indent(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1599	1610	EditorWindow.toggle_line_numbers_event	toggle_line_numbers_event(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1613	1614	index2line	index2line(index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1618	1625	get_line_indent	get_line_indent(line, tabwidth)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1631	1634	IndentSearcher.__init__	__init__(self, text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1636	1643	IndentSearcher.readline	readline(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1645	1656	IndentSearcher.tokeneater	tokeneater(self, type, token, start, end, line, INDENT=tokenize.INDENT, NAME=tokenize.NAME, OPENERS=('class', 'def', 'for', 'if', 'match', 'try', 'while', 'with'))	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1658	1670	IndentSearcher.run	run(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1675	1689	prepstr	prepstr(s)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1698	1738	get_accelerator	get_accelerator(keydefs, eventname)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/editor.py	1741	1754	_editor_window	_editor_window(root)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

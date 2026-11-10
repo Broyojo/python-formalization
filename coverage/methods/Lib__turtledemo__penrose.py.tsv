@@ -1,13 +1,13 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/penrose.py	22	32	kite	kite(l)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	34	44	dart	dart(l)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	46	66	inflatekite	inflatekite(l, n)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	68	85	inflatedart	inflatedart(l, n)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	87	101	draw	draw(l, n, th=2)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	103	106	sun	sun(l, n)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	108	111	star	star(l, n)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	113	123	makeshapes	makeshapes()	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	125	130	start	start()	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	132	143	test	test(l=200, n=4, fun=sun, startpos=(0, 0), th=2)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	145	153	demo	demo(fun=sun)	excluded		platform: GUI toolkit
-Lib/turtledemo/penrose.py	155	168	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/penrose.py	22	32	kite	kite(l)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	34	44	dart	dart(l)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	46	66	inflatekite	inflatekite(l, n)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	68	85	inflatedart	inflatedart(l, n)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	87	101	draw	draw(l, n, th=2)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	103	106	sun	sun(l, n)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	108	111	star	star(l, n)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	113	123	makeshapes	makeshapes()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	125	130	start	start()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	132	143	test	test(l=200, n=4, fun=sun, startpos=(0, 0), th=2)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	145	153	demo	demo(fun=sun)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/penrose.py	155	168	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

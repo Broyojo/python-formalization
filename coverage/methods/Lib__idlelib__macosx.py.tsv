@@ -1,13 +1,13 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/macosx.py	16	49	_init_tk_type	_init_tk_type()	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	51	57	isAquaTk	isAquaTk()	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	59	66	isCarbonTk	isCarbonTk()	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	68	74	isCocoaTk	isCocoaTk()	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	76	82	isXQuartz	isXQuartz()	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	85	97	readSystemPreferences	readSystemPreferences()	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	100	115	preferTabsPreferenceWarning	preferTabsPreferenceWarning()	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	120	132	addOpenEventSupport	addOpenEventSupport(root, flist)	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	134	139	hideTkConsole	hideTkConsole(root)	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	141	241	overrideRootMenu	overrideRootMenu(root, flist)	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	243	251	fixb2context	fixb2context(root)	excluded		platform: GUI toolkit
-Lib/idlelib/macosx.py	253	273	setupApp	setupApp(root, flist)	excluded		platform: GUI toolkit
+Lib/idlelib/macosx.py	16	49	_init_tk_type	_init_tk_type()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	51	57	isAquaTk	isAquaTk()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	59	66	isCarbonTk	isCarbonTk()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	68	74	isCocoaTk	isCocoaTk()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	76	82	isXQuartz	isXQuartz()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	85	97	readSystemPreferences	readSystemPreferences()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	100	115	preferTabsPreferenceWarning	preferTabsPreferenceWarning()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	120	132	addOpenEventSupport	addOpenEventSupport(root, flist)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	134	139	hideTkConsole	hideTkConsole(root)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	141	241	overrideRootMenu	overrideRootMenu(root, flist)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	243	251	fixb2context	fixb2context(root)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/macosx.py	253	273	setupApp	setupApp(root, flist)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/idle_test/__init__.py	16	23	load_tests	load_tests(loader, standard_tests, pattern)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/__init__.py	16	23	load_tests	load_tests(loader, standard_tests, pattern)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

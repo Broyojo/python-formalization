@@ -1,41 +1,41 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/debugger.py	32	34	Idb.__init__	__init__(self, gui)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	36	48	Idb.user_line	user_line(self, frame)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	50	56	Idb.user_exception	user_exception(self, frame, exc_info)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	58	71	_in_rpc_code	_in_rpc_code(frame)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	73	82	_frame2message	_frame2message(frame)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	99	115	Debugger.__init__	__init__(self, pyshell, idb=None)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	117	156	Debugger.run	run(self, *args)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	158	174	Debugger.close	close(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	176	250	Debugger.make_gui	make_gui(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	252	300	Debugger.interaction	interaction(self, message, frame, info=None)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	302	308	Debugger.sync_source_line	sync_source_line(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	310	314	Debugger.__frame2fileline	__frame2fileline(self, frame)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	316	318	Debugger.cont	cont(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	320	322	Debugger.step	step(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	324	326	Debugger.next	next(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	328	330	Debugger.ret	ret(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	332	334	Debugger.quit	quit(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	336	337	Debugger.abort_loop	abort_loop(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	339	350	Debugger.show_stack	show_stack(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	352	354	Debugger.show_source	show_source(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	356	358	Debugger.show_frame	show_frame(self, stackitem)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	360	370	Debugger.show_locals	show_locals(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	372	382	Debugger.show_globals	show_globals(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	384	398	Debugger.show_variables	show_variables(self, force=0)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	400	405	Debugger.set_breakpoint	set_breakpoint(self, filename, lineno)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	407	408	Debugger.clear_breakpoint	clear_breakpoint(self, filename, lineno)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	410	411	Debugger.clear_file_breaks	clear_file_breaks(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	413	421	Debugger.load_breakpoints	load_breakpoints(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	427	437	StackViewer.__init__	__init__(self, master, flist, gui)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	439	463	StackViewer.load_stack	load_stack(self, stack, index=None)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	465	468	StackViewer.popup_event	popup_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	470	476	StackViewer.fill_menu	fill_menu(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	478	481	StackViewer.on_select	on_select(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	483	485	StackViewer.on_double	on_double(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	487	489	StackViewer.goto_source_line	goto_source_line(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	491	494	StackViewer.show_stack_frame	show_stack_frame(self)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	496	505	StackViewer.show_source	show_source(self, index)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	511	536	NamespaceViewer.__init__	__init__(self, master, title, odict=None)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	540	592	NamespaceViewer.load_dict	load_dict(self, odict, force=0, rpc_client=None)	excluded		platform: GUI toolkit
-Lib/idlelib/debugger.py	594	595	NamespaceViewer.close	close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger.py	32	34	Idb.__init__	__init__(self, gui)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	36	48	Idb.user_line	user_line(self, frame)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	50	56	Idb.user_exception	user_exception(self, frame, exc_info)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	58	71	_in_rpc_code	_in_rpc_code(frame)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	73	82	_frame2message	_frame2message(frame)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	99	115	Debugger.__init__	__init__(self, pyshell, idb=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	117	156	Debugger.run	run(self, *args)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	158	174	Debugger.close	close(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	176	250	Debugger.make_gui	make_gui(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	252	300	Debugger.interaction	interaction(self, message, frame, info=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	302	308	Debugger.sync_source_line	sync_source_line(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	310	314	Debugger.__frame2fileline	__frame2fileline(self, frame)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	316	318	Debugger.cont	cont(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	320	322	Debugger.step	step(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	324	326	Debugger.next	next(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	328	330	Debugger.ret	ret(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	332	334	Debugger.quit	quit(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	336	337	Debugger.abort_loop	abort_loop(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	339	350	Debugger.show_stack	show_stack(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	352	354	Debugger.show_source	show_source(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	356	358	Debugger.show_frame	show_frame(self, stackitem)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	360	370	Debugger.show_locals	show_locals(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	372	382	Debugger.show_globals	show_globals(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	384	398	Debugger.show_variables	show_variables(self, force=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	400	405	Debugger.set_breakpoint	set_breakpoint(self, filename, lineno)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	407	408	Debugger.clear_breakpoint	clear_breakpoint(self, filename, lineno)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	410	411	Debugger.clear_file_breaks	clear_file_breaks(self, filename)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	413	421	Debugger.load_breakpoints	load_breakpoints(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	427	437	StackViewer.__init__	__init__(self, master, flist, gui)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	439	463	StackViewer.load_stack	load_stack(self, stack, index=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	465	468	StackViewer.popup_event	popup_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	470	476	StackViewer.fill_menu	fill_menu(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	478	481	StackViewer.on_select	on_select(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	483	485	StackViewer.on_double	on_double(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	487	489	StackViewer.goto_source_line	goto_source_line(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	491	494	StackViewer.show_stack_frame	show_stack_frame(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	496	505	StackViewer.show_source	show_source(self, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	511	536	NamespaceViewer.__init__	__init__(self, master, title, odict=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	540	592	NamespaceViewer.load_dict	load_dict(self, odict, force=0, rpc_client=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/debugger.py	594	595	NamespaceViewer.close	close(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

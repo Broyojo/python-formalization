@@ -1,23 +1,23 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tkinter/dnd.py	109	114	dnd_start	dnd_start(source, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	123	141	DndHandler.__init__	__init__(self, source, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	143	150	DndHandler.__del__	__del__(self)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	152	177	DndHandler.on_motion	on_motion(self, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	179	180	DndHandler.on_release	on_release(self, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	182	183	DndHandler.cancel	cancel(self, event=None)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	185	202	DndHandler.finish	finish(self, event, commit=0)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	210	212	Icon.__init__	__init__(self, name)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	214	228	Icon.attach	attach(self, canvas, x=10, y=10)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	230	238	Icon.detach	detach(self)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	240	246	Icon.press	press(self, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	248	250	Icon.move	move(self, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	252	253	Icon.putback	putback(self)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	255	263	Icon.where	where(self, canvas, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	265	266	Icon.dnd_end	dnd_end(self, target, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	271	275	Tester.__init__	__init__(self, root)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	277	278	Tester.dnd_accept	dnd_accept(self, source, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	280	286	Tester.dnd_enter	dnd_enter(self, source, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	288	291	Tester.dnd_motion	dnd_motion(self, source, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	293	296	Tester.dnd_leave	dnd_leave(self, source, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	298	301	Tester.dnd_commit	dnd_commit(self, source, event)	excluded		platform: GUI toolkit
-Lib/tkinter/dnd.py	304	320	test	test()	excluded		platform: GUI toolkit
+Lib/tkinter/dnd.py	109	114	dnd_start	dnd_start(source, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	123	141	DndHandler.__init__	__init__(self, source, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	143	150	DndHandler.__del__	__del__(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	152	177	DndHandler.on_motion	on_motion(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	179	180	DndHandler.on_release	on_release(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	182	183	DndHandler.cancel	cancel(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	185	202	DndHandler.finish	finish(self, event, commit=0)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	210	212	Icon.__init__	__init__(self, name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	214	228	Icon.attach	attach(self, canvas, x=10, y=10)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	230	238	Icon.detach	detach(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	240	246	Icon.press	press(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	248	250	Icon.move	move(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	252	253	Icon.putback	putback(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	255	263	Icon.where	where(self, canvas, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	265	266	Icon.dnd_end	dnd_end(self, target, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	271	275	Tester.__init__	__init__(self, root)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	277	278	Tester.dnd_accept	dnd_accept(self, source, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	280	286	Tester.dnd_enter	dnd_enter(self, source, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	288	291	Tester.dnd_motion	dnd_motion(self, source, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	293	296	Tester.dnd_leave	dnd_leave(self, source, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	298	301	Tester.dnd_commit	dnd_commit(self, source, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/tkinter/dnd.py	304	320	test	test()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

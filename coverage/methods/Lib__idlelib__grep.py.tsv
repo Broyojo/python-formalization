@@ -1,13 +1,13 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/grep.py	20	40	grep	grep(text, io=None, flist=None)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	43	54	default_glob	default_glob(path)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	57	59	walk_error	walk_error(msg)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	62	75	findfiles	findfiles(folder, pattern, recursive)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	85	102	GrepDialog.__init__	__init__(self, root, engine, flist)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	104	120	GrepDialog.open	open(self, text, searchphrase, io=None)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	122	125	GrepDialog.create_entries	create_entries(self)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	127	132	GrepDialog.create_other_buttons	create_other_buttons(self)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	134	137	GrepDialog.create_command_buttons	create_command_buttons(self)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	139	160	GrepDialog.default_command	default_command(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	162	199	GrepDialog.grep_it	grep_it(self, prog, path)	excluded		platform: GUI toolkit
-Lib/idlelib/grep.py	202	225	_grep_dialog	_grep_dialog(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/grep.py	20	40	grep	grep(text, io=None, flist=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	43	54	default_glob	default_glob(path)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	57	59	walk_error	walk_error(msg)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	62	75	findfiles	findfiles(folder, pattern, recursive)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	85	102	GrepDialog.__init__	__init__(self, root, engine, flist)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	104	120	GrepDialog.open	open(self, text, searchphrase, io=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	122	125	GrepDialog.create_entries	create_entries(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	127	132	GrepDialog.create_other_buttons	create_other_buttons(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	134	137	GrepDialog.create_command_buttons	create_command_buttons(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	139	160	GrepDialog.default_command	default_command(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	162	199	GrepDialog.grep_it	grep_it(self, prog, path)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/grep.py	202	225	_grep_dialog	_grep_dialog(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

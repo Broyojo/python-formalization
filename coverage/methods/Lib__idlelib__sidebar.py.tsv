@@ -1,43 +1,43 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/sidebar.py	15	18	get_lineno	get_lineno(text, index)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	21	23	get_end_linenumber	get_end_linenumber(text)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	26	30	get_displaylines	get_displaylines(text, index)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	32	55	get_widget_padding	get_widget_padding(widget)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	59	64	temp_enable_text_widget	temp_enable_text_widget(text)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	69	81	BaseSideBar.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	83	85	BaseSideBar.init_widgets	init_widgets(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	87	89	BaseSideBar.update_font	update_font(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	91	93	BaseSideBar.update_colors	update_colors(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	95	97	BaseSideBar.grid	grid(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	99	102	BaseSideBar.show_sidebar	show_sidebar(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	104	107	BaseSideBar.hide_sidebar	hide_sidebar(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	109	111	BaseSideBar.yscroll_event	yscroll_event(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	113	119	BaseSideBar.redirect_yscroll_event	redirect_yscroll_event(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	121	124	BaseSideBar.redirect_focusin_event	redirect_focusin_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	126	130	BaseSideBar.redirect_mousebutton_event	redirect_mousebutton_event(self, event, event_name)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	132	136	BaseSideBar.redirect_mousewheel_event	redirect_mousewheel_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	138	262	BaseSideBar.bind_events	bind_events(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	270	272	EndLineDelegator.__init__	__init__(self, changed_callback)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	274	276	EndLineDelegator.insert	insert(self, index, chars, tags=None)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	278	280	EndLineDelegator.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	285	292	LineNumbers.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	294	311	LineNumbers.init_widgets	init_widgets(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	313	314	LineNumbers.grid	grid(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	316	318	LineNumbers.update_font	update_font(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	320	329	LineNumbers.update_colors	update_colors(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	331	356	LineNumbers.update_sidebar_text	update_sidebar_text(self, end)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	358	360	LineNumbers.yscroll_event	yscroll_event(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	364	371	WrappedLineHeightChangeDelegator.__init__	__init__(self, callback)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	373	385	WrappedLineHeightChangeDelegator.insert	insert(self, index, chars, tags=None)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	387	401	WrappedLineHeightChangeDelegator.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	406	422	ShellSidebar.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	424	430	ShellSidebar.init_widgets	init_widgets(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	432	439	ShellSidebar.bind_events	bind_events(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	441	453	ShellSidebar.context_menu_event	context_menu_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	455	456	ShellSidebar.grid	grid(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	458	460	ShellSidebar.change_callback	change_callback(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	462	486	ShellSidebar.update_sidebar	update_sidebar(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	488	494	ShellSidebar.yscroll_event	yscroll_event(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	496	503	ShellSidebar.update_font	update_font(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	505	513	ShellSidebar.update_colors	update_colors(self)	excluded		platform: GUI toolkit
-Lib/idlelib/sidebar.py	516	535	_sidebar_number_scrolling	_sidebar_number_scrolling(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/sidebar.py	15	18	get_lineno	get_lineno(text, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	21	23	get_end_linenumber	get_end_linenumber(text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	26	30	get_displaylines	get_displaylines(text, index)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	32	55	get_widget_padding	get_widget_padding(widget)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	59	64	temp_enable_text_widget	temp_enable_text_widget(text)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	69	81	BaseSideBar.__init__	__init__(self, editwin)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	83	85	BaseSideBar.init_widgets	init_widgets(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	87	89	BaseSideBar.update_font	update_font(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	91	93	BaseSideBar.update_colors	update_colors(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	95	97	BaseSideBar.grid	grid(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	99	102	BaseSideBar.show_sidebar	show_sidebar(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	104	107	BaseSideBar.hide_sidebar	hide_sidebar(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	109	111	BaseSideBar.yscroll_event	yscroll_event(self, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	113	119	BaseSideBar.redirect_yscroll_event	redirect_yscroll_event(self, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	121	124	BaseSideBar.redirect_focusin_event	redirect_focusin_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	126	130	BaseSideBar.redirect_mousebutton_event	redirect_mousebutton_event(self, event, event_name)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	132	136	BaseSideBar.redirect_mousewheel_event	redirect_mousewheel_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	138	262	BaseSideBar.bind_events	bind_events(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	270	272	EndLineDelegator.__init__	__init__(self, changed_callback)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	274	276	EndLineDelegator.insert	insert(self, index, chars, tags=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	278	280	EndLineDelegator.delete	delete(self, index1, index2=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	285	292	LineNumbers.__init__	__init__(self, editwin)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	294	311	LineNumbers.init_widgets	init_widgets(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	313	314	LineNumbers.grid	grid(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	316	318	LineNumbers.update_font	update_font(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	320	329	LineNumbers.update_colors	update_colors(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	331	356	LineNumbers.update_sidebar_text	update_sidebar_text(self, end)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	358	360	LineNumbers.yscroll_event	yscroll_event(self, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	364	371	WrappedLineHeightChangeDelegator.__init__	__init__(self, callback)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	373	385	WrappedLineHeightChangeDelegator.insert	insert(self, index, chars, tags=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	387	401	WrappedLineHeightChangeDelegator.delete	delete(self, index1, index2=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	406	422	ShellSidebar.__init__	__init__(self, editwin)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	424	430	ShellSidebar.init_widgets	init_widgets(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	432	439	ShellSidebar.bind_events	bind_events(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	441	453	ShellSidebar.context_menu_event	context_menu_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	455	456	ShellSidebar.grid	grid(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	458	460	ShellSidebar.change_callback	change_callback(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	462	486	ShellSidebar.update_sidebar	update_sidebar(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	488	494	ShellSidebar.yscroll_event	yscroll_event(self, *args, **kwargs)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	496	503	ShellSidebar.update_font	update_font(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	505	513	ShellSidebar.update_colors	update_colors(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/sidebar.py	516	535	_sidebar_number_scrolling	_sidebar_number_scrolling(parent)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

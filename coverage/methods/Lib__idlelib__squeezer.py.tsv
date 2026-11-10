@@ -1,12 +1,12 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/squeezer.py	28	81	count_lines_with_wrapping	count_lines_with_wrapping(s, linewidth=80)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	95	125	ExpandingButton.__init__	__init__(self, s, tags, numoflines, squeezer)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	127	136	ExpandingButton.set_is_dangerous	set_is_dangerous(self)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	138	167	ExpandingButton.expand	expand(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	169	175	ExpandingButton.copy	copy(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	177	183	ExpandingButton.view	view(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	191	197	ExpandingButton.context_menu_event	context_menu_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	207	212	Squeezer.reload	reload(cls)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	214	275	Squeezer.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	277	288	Squeezer.count_lines	count_lines(self, s)	excluded		platform: GUI toolkit
-Lib/idlelib/squeezer.py	290	335	Squeezer.squeeze_current_text	squeeze_current_text(self)	excluded		platform: GUI toolkit
+Lib/idlelib/squeezer.py	28	81	count_lines_with_wrapping	count_lines_with_wrapping(s, linewidth=80)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	95	125	ExpandingButton.__init__	__init__(self, s, tags, numoflines, squeezer)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	127	136	ExpandingButton.set_is_dangerous	set_is_dangerous(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	138	167	ExpandingButton.expand	expand(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	169	175	ExpandingButton.copy	copy(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	177	183	ExpandingButton.view	view(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	191	197	ExpandingButton.context_menu_event	context_menu_event(self, event)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	207	212	Squeezer.reload	reload(cls)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	214	275	Squeezer.__init__	__init__(self, editwin)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	277	288	Squeezer.count_lines	count_lines(self, s)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/squeezer.py	290	335	Squeezer.squeeze_current_text	squeeze_current_text(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

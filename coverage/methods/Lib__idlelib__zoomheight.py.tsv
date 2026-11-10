@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/zoomheight.py	17	19	ZoomHeight.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
-Lib/idlelib/zoomheight.py	21	31	ZoomHeight.zoom_height_event	zoom_height_event(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/zoomheight.py	33	58	ZoomHeight.zoom_height	zoom_height(self)	excluded		platform: GUI toolkit
-Lib/idlelib/zoomheight.py	60	107	ZoomHeight.get_max_height_and_y_coord	get_max_height_and_y_coord(self)	excluded		platform: GUI toolkit
-Lib/idlelib/zoomheight.py	110	113	get_window_geometry	get_window_geometry(top)	excluded		platform: GUI toolkit
-Lib/idlelib/zoomheight.py	116	117	set_window_geometry	set_window_geometry(top, geometry)	excluded		platform: GUI toolkit
+Lib/idlelib/zoomheight.py	17	19	ZoomHeight.__init__	__init__(self, editwin)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/zoomheight.py	21	31	ZoomHeight.zoom_height_event	zoom_height_event(self, event=None)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/zoomheight.py	33	58	ZoomHeight.zoom_height	zoom_height(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/zoomheight.py	60	107	ZoomHeight.get_max_height_and_y_coord	get_max_height_and_y_coord(self)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/zoomheight.py	110	113	get_window_geometry	get_window_geometry(top)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/idlelib/zoomheight.py	116	117	set_window_geometry	set_window_geometry(top, geometry)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification

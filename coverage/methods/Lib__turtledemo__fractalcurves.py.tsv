@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtledemo/fractalcurves.py	19	38	CurvesTurtle.hilbert	hilbert(self, size, level, parity)	excluded		platform: GUI toolkit
-Lib/turtledemo/fractalcurves.py	44	60	CurvesTurtle.fractalgon	fractalgon(self, n, rad, lev, dir)	excluded		platform: GUI toolkit
-Lib/turtledemo/fractalcurves.py	63	73	CurvesTurtle.fractal	fractal(self, dist, depth, dir)	excluded		platform: GUI toolkit
-Lib/turtledemo/fractalcurves.py	75	130	main	main()	excluded		platform: GUI toolkit
+Lib/turtledemo/fractalcurves.py	19	38	CurvesTurtle.hilbert	hilbert(self, size, level, parity)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/fractalcurves.py	44	60	CurvesTurtle.fractalgon	fractalgon(self, n, rad, lev, dir)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/fractalcurves.py	63	73	CurvesTurtle.fractal	fractal(self, dist, depth, dir)	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
+Lib/turtledemo/fractalcurves.py	75	130	main	main()	todo		unclassified: excluded wholesale as GUI toolkit until 2026-11-10; many functions here have no GUI dependence, so each needs its own classification
