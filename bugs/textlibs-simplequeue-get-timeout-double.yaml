@@ -1,0 +1,75 @@
+id: textlibs-simplequeue-get-timeout-double
+title: "SimpleQueue.get converts a timeout without __index__ through a double, so Fraction(2**63 - 1, 10**9) raises OverflowError in C though its nanoseconds fit PyTime_t; the twin returns the item"
+priority: P5
+kind: twin-divergence
+module: textlibs
+status: duplicate
+duplicate_of: textlibs-simplequeue-get-timeout (the same conversion before the queue is looked at, seen at the boundary of PyTime_t)
+files: [Modules/_queuemodule.c, Python/pytime.c]
+functions: ["_queue_SimpleQueue_get_impl"]
+summary: |
+  This record exists because the Lean entry `textlibs-simplequeue-get-finite` is a refutation. It
+  is the boundary of `textlibs-simplequeue-get-timeout`, with the same cause in _queuemodule.c,
+  and should not be counted or filed as a separate bug.
+
+  The C SimpleQueue.get converts a blocking timeout with _PyTime_FromSecondsObject before it looks
+  at the queue. For anything without __index__, that conversion calls PyFloat_AsDouble, multiplies
+  the double by 1e9, rounds up, and tests the result against the range of PyTime_t in double
+  arithmetic. Fraction(2**63 - 1, 10**9) seconds is exactly PyTime_MAX nanoseconds, but as a
+  double it is 9223372036.854776 and the product is 2.0**63, which fails the range test. So
+  q.put(1); q.get(timeout=Fraction(2**63 - 1, 10**9)) raises OverflowError("timestamp out of range
+  for C PyTime_t") although the item is there and the timeout fits; Decimal('9223372036.854775807')
+  does the same. queue._PySimpleQueue returns the item. An int timeout takes the exact branch of
+  the conversion and does not show this.
+likelihood: |
+  Negligible. It needs a Fraction or Decimal timeout within about 512 ns of 292 years.
+maybe_intended: |
+  The rounding through a double is how _PyTime_FromSecondsObject treats every object without
+  __index__ and is not specific to queues; nobody would call a timeout of 292 years less 1 ns a
+  use case. The divergence itself is the order of validation already recorded in
+  textlibs-simplequeue-get-timeout: C reports the conversion error before it looks at the queue,
+  the twin never converts. Not to be filed separately.
+reproducer: |
+  import math, queue
+  from fractions import Fraction
+  t = Fraction(2**63 - 1, 10**9)
+  out = []
+  for Q in (queue.SimpleQueue, queue._PySimpleQueue):
+      q = Q(); q.put(1)
+      try:
+          out.append(q.get(timeout=t))
+      except Exception as e:
+          out.append(type(e).__name__)
+  fits = math.ceil(t * 10**9) == 2**63 - 1
+  print('C', out[0], 'Py', out[1], 'exact ns fit PyTime_t:', fits, 'double product:', float(t) * 1e9)
+  if out == ['OverflowError', 1] and fits and queue.SimpleQueue.__module__ == '_queue':
+      print('REPRODUCED textlibs-simplequeue-get-timeout-double')
+expected: |
+  Both return 1: the timeout is positive and its nanoseconds are PyTime_MAX.
+observed: |
+  python3 3.15.2: C OverflowError Py 1 exact ns fit PyTime_t: True double product:
+  9.223372036854776e+18.
+tested: "REPRODUCED on python3 3.15.2; not run on main (no main build was available where this was recorded)"
+promised_by: |
+  The twins agreeing (queue.SimpleQueue falls back to _PySimpleQueue), as in
+  textlibs-simplequeue-get-timeout. Nothing promises nanosecond precision for a Fraction timeout.
+cause: |
+  Python/pytime.c:654 and 674-684, pytime_from_object: an object that fails PyIndex_Check goes
+  through PyFloat_AsDouble and pytime_from_double. Python/pytime.c:633-638: `d *= (double)unit_to_ns;`, pytime_round, then
+  `if (!((double)PyTime_MIN <= d && d < -(double)PyTime_MIN))` raises. Modules/_queuemodule.c:385-391:
+  that error is returned before RingBuf_IsEmpty is checked at line 401.
+possible_fix: |
+  None needed beyond the first fix proposed in textlibs-simplequeue-get-timeout: look at the
+  buffer before converting the timeout.
+duplicates:
+  issues: []
+  queries: ["SimpleQueue get timeout Fraction OverflowError",
+            "_PyTime_FromSecondsObject double rounding overflow timeout",
+            "SimpleQueue timeout PyTime_t precision",
+            "queue SimpleQueue timeout out of range C PyTime_t"]
+  bugforge: "not checked (the bugforge list is not available where this was recorded)"
+  note: |
+    The duplicate is of a record in this repo, not of an upstream issue.
+lean:
+  property: PyLean.TextLibs.SQ.GetTwinsFinite
+  theorem: PyLean.TextLibs.SQ.getTwinsFinite_refuted

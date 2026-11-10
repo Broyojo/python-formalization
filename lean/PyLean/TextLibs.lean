@@ -1898,8 +1898,15 @@ def entries : List Entry := [
     bug := some "textlibs-simplequeue-get-timeout" },
   { id := "textlibs-simplequeue-get-finite", pyFile := "Modules/_queuemodule.c", pyFns := []
     statement := "They agree for None and for finite timeouts within PyTime_t that are non-negative or at most -1 ns."
-    source := "narrows textlibs-simplequeue-get-tiny-negative", status := .proven
-    prop := ``SQ.GetTwinsFinite, thm := some ``SQ.getTwinsFinite_proven },
+    source := "narrows textlibs-simplequeue-get-tiny-negative", status := .refuted
+    prop := ``SQ.GetTwinsFinite, thm := some ``SQ.getTwinsFinite_refuted
+    bug := some "textlibs-simplequeue-get-timeout-double"
+    notes := "C converts a non-int timeout through a double (Python/pytime.c:625-647, 674-684): Fraction(2**63 - 1, 10**9) has exact nanoseconds PyTime_MAX, but the double product is 2^63, so C raises OverflowError where the twin returns the item. The model rounded the exact rational before; it now uses PyLean.Binary64. textlibs-simplequeue-get-int is the part that holds." },
+  { id := "textlibs-simplequeue-get-int", pyFile := "Modules/_queuemodule.c", pyFns := []
+    statement := "On a non-empty SimpleQueue, C and the twin agree for None and for every int timeout whose nanoseconds fit PyTime_t."
+    source := "narrows textlibs-simplequeue-get-finite", status := .proven
+    prop := ``SQ.GetTwinsInt, thm := some ``SQ.getTwinsInt_proven
+    notes := "Models the non-empty path only (no waiting), so it credits no row." },
   { id := "textlibs-urllib-quote-from-bytes-paths", pyFile := "Lib/urllib/parse.py"
     pyFns := ["quote_from_bytes", "_byte_quoter_factory", "_Quoter.__init__", "_Quoter.__missing__"]
     statement := "For every bytes or bytearray and every str or bytes safe, quote_from_bytes's three paths (all bytes safe: bs.decode(); below 200,000 bytes; chunks of isqrt(len)) all return each byte as itself when it is always safe or in safe's ASCII part, and as %XX otherwise; any other first argument raises TypeError."

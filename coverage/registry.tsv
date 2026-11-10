@@ -3490,7 +3490,8 @@ textlibs-zoneinfo-before-twins	refuted	Lib/zoneinfo/_zoneinfo.py
 textlibs-zoneinfo-before-twins-narrow	proven	Lib/zoneinfo/_zoneinfo.py	
 textlibs-simplequeue-get-twins	refuted	Modules/_queuemodule.c	
 textlibs-simplequeue-get-tiny-negative	refuted	Modules/_queuemodule.c	
-textlibs-simplequeue-get-finite	proven	Modules/_queuemodule.c	
+textlibs-simplequeue-get-finite	refuted	Modules/_queuemodule.c	
+textlibs-simplequeue-get-int	proven	Modules/_queuemodule.c	
 textlibs-urllib-quote-from-bytes-paths	proven	Lib/urllib/parse.py	quote_from_bytes,_byte_quoter_factory,_Quoter.__init__,_Quoter.__missing__
 textlibs-urllib-quote-bytes-round-trip	proven	Lib/urllib/parse.py	quote_from_bytes,unquote_to_bytes,_unquote_impl
 textlibs-urllib-quote-round-trip	proven	Lib/urllib/parse.py	quote,unquote,_generate_unquoted_parts,_unquote_impl
