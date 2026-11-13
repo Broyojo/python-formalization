@@ -69,6 +69,11 @@ def bugs():
         if Path(p).stem in gone:
             continue
         t = Path(p).read_text()
+        # Records that note a limit of the model, or a documented limitation, are not CPython bugs.
+        title = re.search(r'^title:\s*"?(.*)', t, re.M)
+        if (re.search(r"^kind:\s*(scope-record|documented-limitation)\b", t, re.M)
+                or (title and title.group(1).startswith("NOT FOR FILING"))):
+            continue
         k = re.search(r"^kind:\s*(\S+)", t, re.M)
         k = k.group(1) if k else ""
         kind[next((v for key, v in groups if k.startswith(key)), "Other")] += 1

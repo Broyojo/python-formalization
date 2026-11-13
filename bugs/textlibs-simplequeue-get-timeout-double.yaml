@@ -49,7 +49,7 @@ expected: |
 observed: |
   python3 3.15.2: C OverflowError Py 1 exact ns fit PyTime_t: True double product:
   9.223372036854776e+18.
-tested: "REPRODUCED on python3 3.15.2; not run on main (no main build was available where this was recorded)"
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev), checked 2026-11-13"
 promised_by: |
   The twins agreeing (queue.SimpleQueue falls back to _PySimpleQueue), as in
   textlibs-simplequeue-get-timeout. Nothing promises nanosecond precision for a Fraction timeout.
@@ -66,8 +66,13 @@ duplicates:
   queries: ["SimpleQueue get timeout Fraction OverflowError",
             "_PyTime_FromSecondsObject double rounding overflow timeout",
             "SimpleQueue timeout PyTime_t precision",
-            "queue SimpleQueue timeout out of range C PyTime_t"]
-  bugforge: "not checked (the bugforge list is not available where this was recorded)"
+            "queue SimpleQueue timeout out of range C PyTime_t",
+            "SimpleQueue timeout Fraction", "SimpleQueue get timeout OverflowError", "SimpleQueue OverflowError",
+            "queue timeout inf OverflowError", "_PyTime_FromSecondsObject double precision", "_PyTime_FromSecondsObject",
+            "timestamp out of range PyTime_t", "timeout Fraction OverflowError", "pytime_from_double"]
+  related: ["python/cpython#156263 (clinic converter for durations; not a duplicate)",
+            "python/cpython#67795 (utcfromtimestamp(Decimal) goes through a double; not a duplicate)"]
+  bugforge: "checked: no SimpleQueue or pytime entry"
   note: |
     The duplicate is of a record in this repo, not of an upstream issue.
 lean:

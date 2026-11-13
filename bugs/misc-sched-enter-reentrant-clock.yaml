@@ -1,5 +1,5 @@
 id: misc-sched-enter-reentrant-clock
-title: "scheduler.enter: a timefunc (or the + on its result) that schedules an event and then raises leaves that event queued after the failed enter (scope record, not a bug)"
+title: "NOT FOR FILING: scheduler.enter: a timefunc (or the + on its result) that schedules an event and then raises leaves that event queued after the failed enter (scope record, not a bug)"
 priority: P5
 kind: scope-record
 module: misc
@@ -56,7 +56,7 @@ expected: |
 observed: |
   RuntimeError: clock 1, then RuntimeError: add 1: the callback's exception comes out and its
   event is queued, for the clock and for the addition.
-tested: "REPRODUCED on python3 3.15.2; not run on main (no main build was available where this was recorded)"
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev), checked 2026-11-13"
 promised_by: |
   Nothing; recorded to put the scope limit of the enter theorems on record.
 cause: |
@@ -72,5 +72,7 @@ lean: |
 duplicates:
   issues: []
   queries: ["sched enter timefunc raises queue", "sched scheduler timefunc reentrant enterabs",
-            "sched.scheduler enter exception event left in queue"]
+            "sched.scheduler enter exception event left in queue",
+            "sched enter timefunc exception", "sched scheduler reentrant", "sched timefunc enterabs",
+            "sched enter exception queue", "sched.scheduler timefunc raises"]
   bugforge: "not applicable (not a bug)"

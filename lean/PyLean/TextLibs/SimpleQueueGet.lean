@@ -52,7 +52,7 @@ def fromDouble (x : F64) : Py Int :=
   else .error timeOverflow
 
 /-- `_PyTime_FromSecondsObject` with ceiling rounding, to nanoseconds: `pytime_from_object`,
-Python/pytime.c:650-684. The `int` branch is `PyLong_AsLongLong` and `pytime_mul`, both of which
+Python/pytime.c:650-686. The `int` branch is `PyLong_AsLongLong` and `pytime_mul`, both of which
 report the same overflow. -/
 def toNs : TO → Py Int
   | .none => .ok 0

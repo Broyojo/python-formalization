@@ -205,6 +205,7 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
   <ul class="areas">{{AREABARS}}</ul>
   <figcaption>How much of each part of CPython 3.15.2 has been copied, tested, proved and accepted by review. Code with nothing to check, such as memory bookkeeping, is left out.</figcaption>
   <p class="correction"><strong>Correction, 10 November 2026:</strong> the first version of this page left out all of idlelib, tkinter and turtle as GUI code. Many of those functions don't touch the GUI, so they now count as not yet modelled, and coverage went from 15.7% to {{FAITHFULPCT}}. Thanks to Terry Reedy for pointing this out.</p>
+  <p class="correction"><strong>Update, 13 November 2026:</strong> the bug count now leaves out records that describe a limit of our model or a documented limitation rather than a CPython bug (five were counted before), and includes two new reports from outside contributors. Thanks to Robertboy18 for seven pull requests that corrected our own entries.</p>
 </figure>
 
 <div class="col">

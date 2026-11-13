@@ -45,7 +45,7 @@ expected: |
 observed: |
   Module(body=[Expr(value=NamedExpr(target=Name(id='__debug__'), value=Constant(value=True)))]):
   the target is kept, the same name as the value is folded.
-tested: "REPRODUCED on python3 3.15.2; not run on main (no main build was available where this was recorded)"
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev), checked 2026-11-13"
 promised_by: |
   Nothing; recorded to put the scope limit of the fold theorems on record.
 cause: |

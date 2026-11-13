@@ -9,7 +9,8 @@ summary: |
   timezone.__new__ in _pydatetime tests `not offset` to hand out timezone.utc and
   `cls._minoffset <= offset <= cls._maxoffset` for the range. For an instance of a timedelta
   subclass these run the object's own __bool__, its __ge__ (Python tries the reflected method of
-  the right operand first when its type is a subclass that overrides it) and its __le__.
+  the right operand first whenever its type is a proper subclass of the left operand's type,
+  Objects/object.c:1055-1057) and its __le__.
   new_timezone in _datetime calls delta_bool and compares GET_TD_DAYS, GET_TD_SECONDS and
   GET_TD_MICROSECONDS, which read the stored fields and call none of these methods.
 
@@ -51,7 +52,7 @@ expected: |
   The twins agree on what timezone(offset) is for an offset that is a timedelta.
 observed: |
   python3 3.15.2: C ('UTC+01:00', 'x') Py ('utc', 'RuntimeError: ge').
-tested: "REPRODUCED on python3 3.15.2; not run on main (no main build was available where this was recorded)"
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev), checked 2026-11-13"
 promised_by: |
   The twins agreeing: datetime imports _datetime and falls back to _pydatetime
   (Lib/datetime.py). The timezone documentation says only what type offset must have, not which
@@ -70,8 +71,12 @@ duplicates:
   issues: []
   queries: ["timezone timedelta subclass __bool__",
             "datetime timezone offset timedelta subclass C Python differ",
-            "new_timezone delta_bool subclass", "_pydatetime timezone __new__ not offset subclass"]
-  bugforge: "not checked (the bugforge list is not available where this was recorded)"
+            "new_timezone delta_bool subclass", "_pydatetime timezone __new__ not offset subclass",
+            "timezone timedelta subclass", "timezone subclass bool", "pydatetime timezone subclass",
+            "timedelta subclass __bool__", "timezone utc subclass offset", "new_timezone delta_bool",
+            "timezone __new__ timedelta subclass C Python"]
+  related: ["python/cpython#109798 (message difference only; not a duplicate)"]
+  bugforge: "checked: no datetime timezone entry"
 lean:
   property: PyLean.Datetime.TimezoneNewArg
   theorem: PyLean.Datetime.timezoneNewArg_refuted
