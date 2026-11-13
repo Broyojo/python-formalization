@@ -5590,6 +5590,77 @@ class PlistArea:
         return {"ok": {"ok": pl_enc(v)}}
 
 
+# ---- queue.SimpleQueue.get on a queue holding one item -----------------------
+
+import math  # noqa: E402
+import queue  # noqa: E402
+from fractions import Fraction  # noqa: E402
+
+assert queue.SimpleQueue.__module__ == "_queue"
+
+
+@area("sq", 3)
+class SqArea:
+    """`get(block, timeout)` of the C SimpleQueue (`sq.get_c`) and of `_PySimpleQueue` (`sq.get_py`).
+
+    "k" is the kind of timeout: none, int, float (given by its exact ratio), frac (a Fraction),
+    inf (float('inf')) or nan (float('nan')); "n" and "d" are the ratio as decimal strings. Only
+    plain int, float and Fraction objects are generated: the model does not cover subclasses or
+    objects with their own __index__, __float__ or __lt__.
+    """
+    B = 2 ** 63
+    NEAR = [1, 2, 100, 255, 256, 257, 511, 512, 513, 1023, 1024, 1025, 2047, 2048, 2049, 4096, 10 ** 6]
+    FLOATS = [9223372036.854775, 9223372036.854776, -9223372036.854776, -9223372036.854777, 5e-324, -5e-324,
+              -0.0, 0.0, 1e-9, -1e-9, 1e-10, -1e-10, 0.5, 1e300, -1e300, 1.7976931348623157e308]
+
+    @classmethod
+    def gen(cls, r):
+        c = {"mod": "textlibs", "fn": r.choice(["sq.get_c", "sq.get_py"]), "block": r.random() < 0.85,
+             "k": "none", "n": "0", "d": "1"}
+        k = r.random()
+        if k < 0.04:
+            return c
+        if k < 0.07:
+            c["k"] = r.choice(["inf", "nan"])
+            return c
+        if k < 0.22:
+            n = r.choice([0, 1, -1, 2, 9223372036, 9223372037, -9223372036, -9223372037, cls.B, -cls.B, 10 ** 30,
+                          -10 ** 30, r.randrange(-10 ** 11, 10 ** 11), r.randrange(-50, 50)])
+            c.update(k="int", n=str(n))
+            return c
+        if k < 0.45:  # a Fraction of nanoseconds next to the ends of PyTime_t
+            off = r.choice([0, 1, -1]) * r.choice(cls.NEAR) if r.random() < 0.8 else r.randrange(-5000, 5000)
+            n = (cls.B - 1 + off) if r.random() < 0.7 else -(cls.B + off)
+            c.update(k="frac", n=str(n), d=str(10 ** 9))
+            return c
+        if k < 0.62:  # around 0 and -1 ns
+            n = r.choice([-1, 1, -2, 2, -3, 0, -999999999, -1000000001, -(10 ** 9), r.randrange(-3 * 10 ** 9, 10)])
+            d = r.choice([10 ** 9, 10 ** 10, 10 ** 9 + 1, 10 ** 9 - 1, 3 * 10 ** 9, 2 ** 30, 7, 10 ** 18, 1])
+            c.update(k="frac", n=str(n), d=str(d))
+            return c
+        if k < 0.85:
+            f = r.choice([r.uniform(-10, 10), r.uniform(-2e-9, 2e-9), r.uniform(9.2233e9, 9.2234e9),
+                          r.uniform(-9.2234e9, -9.2233e9), r.uniform(-1e300, 1e300), r.choice(cls.FLOATS)])
+            a, b = f.as_integer_ratio()
+            c.update(k="float", n=str(a), d=str(b))
+            return c
+        c.update(k="frac", n=str(r.randrange(-10 ** 22, 10 ** 22)), d=str(r.randrange(1, 10 ** 13)))
+        return c
+
+    @classmethod
+    def run(cls, c):
+        k, n, d = c["k"], int(c["n"]), int(c["d"])
+        t = {"none": None, "int": n, "inf": math.inf, "nan": math.nan}.get(k, k)
+        if k == "float":
+            t = n / d
+            assert Fraction(t) == Fraction(n, d)
+        elif k == "frac":
+            t = Fraction(n, d)
+        q = (queue.SimpleQueue if c["fn"] == "sq.get_c" else queue._PySimpleQueue)()
+        q.put(7)
+        return common.py_result(lambda: q.get(block=c["block"], timeout=t))
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

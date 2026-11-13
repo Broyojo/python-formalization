@@ -14,6 +14,7 @@ import PyLean.TextLibs.UrlDiff
 import PyLean.TextLibs.TomlDiff
 import PyLean.TextLibs.EmailDiff
 import PyLean.TextLibs.PlistDiff
+import PyLean.TextLibs.SimpleQueueDiff
 
 /-! Differential-testing handler for `textlibs` cases (`"mod": "textlibs"`).
 The function name's prefix (`struct.`, `binascii.`, ...) selects the sub-handler. -/
@@ -42,6 +43,7 @@ def run (fn : String) (j : Json) : Except String Json :=
   else if fn.startsWith "email." then Email.run fn j
   else if fn.startsWith "emailfr." then Email.runFrames j
   else if fn.startsWith "plist." then Plist.run fn j
+  else if fn.startsWith "sq." then SQ.run fn j
   else throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j => some (run fn j)
