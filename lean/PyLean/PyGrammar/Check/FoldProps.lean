@@ -3,7 +3,7 @@ import PyLean.PyGrammar.Check.Props
 /-!
 What the `astfold_*` walkers do when they really fold, with `syntax_check_only` off.
 
-`FoldReachesNames` is the walkers' property: `astfold_expr` replaces every `Name('__debug__', Load)`
+`FoldReachesWalked` is the walkers' property: `astfold_expr` replaces every `Name('__debug__', Load)`
 it sees, so if a tree still holds one, some walker skipped a field. `Clean` asks this of every field
 that `Parser/Python.asdl` types as a node, so the statement does not lean on `visits`; `coverOK`
 checks each row of `visits` against the ASDL. Fuel appears only as `fuelOut`, set when the model
@@ -11,7 +11,14 @@ ran out, which is never a Python outcome.
 
 The broad statement is false: `astfold_pattern` sends `MatchValue` values and `MatchMapping` keys to
 `fold_const_match_patterns`, which does not walk them. That is `FoldReachesAll` and the bug
-`pygrammar-check-debug-in-pattern`. `FoldReachesNames` is the rest.
+`pygrammar-check-debug-in-pattern`.
+
+`FoldReachesNames`, the rest, is false too: the `NamedExpr_kind` case of `astfold_expr` folds the
+value and not the target (`Python/ast_preprocess.c:632-634`), and `validate_expr` accepts a target
+that is a `Name` in `Load` context (`Python/ast.c:392-399`), so a hand-built tree keeps a
+`__debug__` load there. The grammar only builds `Store` targets. That is the scope record
+`pygrammar-check-fold-namedexpr-target`. `FoldReachesWalked` sets that field aside as well and
+holds.
 -/
 
 namespace PyLean.PyGrammar.Check
@@ -74,6 +81,12 @@ def skipBroad (fut : Bool) (c : Ctor) (i : Nat) : Bool := modSkip c || (fut && a
 
 def skipNarrow (fut : Bool) (c : Ctor) (i : Nat) : Bool := skipBroad fut c i || patSkip c i
 
+/-- `NamedExpr.target`, which the `NamedExpr_kind` case of `astfold_expr` does not walk:
+`Python/ast_preprocess.c:632-634` calls `astfold_expr` on the value only. -/
+def walrusSkip (c : Ctor) (i : Nat) : Bool := c == .NamedExpr && i == 0
+
+def skipWalked (fut : Bool) (c : Ctor) (i : Nat) : Bool := skipNarrow fut c i || walrusSkip c i
+
 /-- The body a module's `astfold_mod` case folds. -/
 def modBody : Ast → Ast
   | .node .Module (b :: _) _ => b
@@ -87,10 +100,19 @@ def FoldReachesAll : Prop := ∀ (fuel : Nat) (st : PState) (m : Ast), st.syntax
   (foldMod fuel m st).2.fuelOut = false →
     Clean (skipBroad st.futureAnnotations) (modBody (foldMod fuel m st).1)
 
-/-- The same, setting aside the two fields of `patSkip`. -/
+/-- The same, setting aside the two fields of `patSkip`. False: the target of a `NamedExpr` is
+not walked either, and a hand-built tree can hold a `__debug__` load there. -/
 def FoldReachesNames : Prop := ∀ (fuel : Nat) (st : PState) (m : Ast), st.syntaxCheckOnly = false →
   (foldMod fuel m st).2.fuelOut = false →
     Clean (skipNarrow st.futureAnnotations) (modBody (foldMod fuel m st).1)
+
+/-- The same, setting aside `NamedExpr.target` too: every other node-typed field of
+`Parser/Python.asdl` is reached. Hypothesis: folding is on, as in `FoldReachesAll`. Like the two
+statements above it speaks of the nodes the folded tree holds: `Clean` does not say that the walk
+kept every node it was given. -/
+def FoldReachesWalked : Prop := ∀ (fuel : Nat) (st : PState) (m : Ast), st.syntaxCheckOnly = false →
+  (foldMod fuel m st).2.fuelOut = false →
+    Clean (skipWalked st.futureAnnotations) (modBody (foldMod fuel m st).1)
 
 /-! ### The refutation -/
 
@@ -148,6 +170,33 @@ theorem foldReachesAll_refuted : ¬ FoldReachesAll := fun h =>
   not_clean_of_debugAt (skipBroad false) [0, 1, 0, 0, 0, 0] _ (by decide +kernel)
     (h 64 {} debugInPattern rfl (by decide +kernel))
 
+/-- `ast.Module([ast.Expr(ast.NamedExpr(d, d))], [])` with `d = ast.Name('__debug__', ast.Load())`
+as both target and value. Only a hand-built tree has it: the grammar gives a walrus target the
+`Store` context, and compiling `(__debug__ := 1)` is rejected in symbol-table analysis
+(`Python/symtable.c:1624-1627`), while `validate_expr` checks no more than that the target is a
+`Name`. -/
+def debugInWalrus : Ast :=
+  let load := Ast.node .Load [] none
+  let dbg := Ast.node .Name [.ident ("__debug__".toList.map Char.toNat), load] none
+  .node .Module [.seq [.node .Expr [.node .NamedExpr [dbg, dbg] none] none], .seq []] none
+
+set_option maxRecDepth 100000 in
+/-- What the folder makes of it at optimize level 0: the value becomes `Constant(True)` and the
+target stays. This is the tree `compile(..., flags=ast.PyCF_OPTIMIZED_AST)` returns on 3.15.2, the
+output of the reproducer in `bugs/pygrammar-check-fold-namedexpr-target.yaml`. One input, so it
+credits no row. -/
+theorem debugInWalrus_folded :
+    modBody (foldMod 64 debugInWalrus {}).1 =
+      .seq [.node .Expr [.node .NamedExpr
+        [.node .Name [.ident ("__debug__".toList.map Char.toNat), .node .Load [] none] none,
+         .node .Constant [.const .true_, .null] none] none] none] := by
+  rfl
+
+set_option maxRecDepth 100000 in
+theorem foldReachesNames_refuted : ¬ FoldReachesNames := fun h =>
+  not_clean_of_debugAt (skipNarrow false) [0, 0, 0] _ (by decide +kernel)
+    (h 64 {} debugInWalrus rfl (by decide +kernel))
+
 /-! ### Coverage of `visits` against `Parser/Python.asdl` -/
 
 /-- The fields a row of `visits` folds. -/
@@ -159,16 +208,16 @@ def stepIdx (fut : Bool) : List Step → List Nat
   | .push _ _ _ :: r => stepIdx fut r
   | .pop :: r => stepIdx fut r
 
-/-- A row of `visits` covers every node-typed field that `skipNarrow` does not set aside. -/
+/-- A row of `visits` covers every node-typed field that `skipWalked` does not set aside. -/
 def coverOK (fut : Bool) (c : Ctor) : Bool :=
-  (astFields c).all fun i => skipNarrow fut c i || (stepIdx fut (visits c)).contains i
+  (astFields c).all fun i => skipWalked fut c i || (stepIdx fut (visits c)).contains i
 
 set_option maxHeartbeats 4000000 in
 theorem coverOK_all (fut : Bool) (c : Ctor) : coverOK fut c = true := by
   cases fut <;> cases c <;> rfl
 
 theorem visits_cover (fut : Bool) (c : Ctor) (i : Nat) (hi : i ∈ astFields c)
-    (hs : skipNarrow fut c i = false) : i ∈ stepIdx fut (visits c) := by
+    (hs : skipWalked fut c i = false) : i ∈ stepIdx fut (visits c) := by
   have h := coverOK_all fut c
   unfold coverOK at h
   have := List.all_eq_true.mp h i hi
@@ -353,29 +402,29 @@ theorem foldBinop_clean {sk : Ctor → Nat → Bool} (st : PState) (hs : st.synt
   · exact h
 
 theorem mappingKeys_getD (fut : Bool) (st : PState) (f : Nat) (c : Ctor) (fs : List Ast) (i : Nat)
-    (h : skipNarrow fut c i = false) :
+    (h : skipWalked fut c i = false) :
     (mappingKeys st f c fs).getD i .null = fs.getD i .null := by
   unfold mappingKeys
   split
   · cases i with
-    | zero => simp [skipNarrow, patSkip] at h
+    | zero => simp [skipWalked, skipNarrow, patSkip] at h
     | succ i => simp [List.getD_eq_getElem?_getD]
   · cases i with
-    | zero => simp [skipNarrow, patSkip] at h
+    | zero => simp [skipWalked, skipNarrow, patSkip] at h
     | succ i => simp [List.getD_eq_getElem?_getD]
   · rfl
 
-theorem skip_binop (fut : Bool) : skipNarrow fut .BinOp 2 = false := by cases fut <;> rfl
+theorem skip_binop (fut : Bool) : skipWalked fut .BinOp 2 = false := by cases fut <;> rfl
 
-theorem skip_tuple (fut : Bool) : skipNarrow fut .Tuple 0 = false := by cases fut <;> rfl
+theorem skip_tuple (fut : Bool) : skipWalked fut .Tuple 0 = false := by cases fut <;> rfl
 
 theorem postFold_clean (fut : Bool) (st : PState) (f : Nat) (c : Ctor) (fs : List Ast)
     (l : Option Loc) (hs : st.syntaxCheckOnly = false)
-    (h : ∀ i, i ∈ astFields c → skipNarrow fut c i = false →
-      Clean (skipNarrow fut) (fs.getD i .null)) :
-    Clean (skipNarrow fut) (postFold st c (mappingKeys st f c fs) l) := by
-  have h' : ∀ i, i ∈ astFields c → skipNarrow fut c i = false →
-      Clean (skipNarrow fut) ((mappingKeys st f c fs).getD i .null) := by
+    (h : ∀ i, i ∈ astFields c → skipWalked fut c i = false →
+      Clean (skipWalked fut) (fs.getD i .null)) :
+    Clean (skipWalked fut) (postFold st c (mappingKeys st f c fs) l) := by
+  have h' : ∀ i, i ∈ astFields c → skipWalked fut c i = false →
+      Clean (skipWalked fut) ((mappingKeys st f c fs).getD i .null) := by
     intro i hi hk
     rw [mappingKeys_getD fut st f c fs i hk]
     exact h i hi hk
@@ -416,23 +465,23 @@ theorem postFold_clean (fut : Bool) (st : PState) (f : Nat) (c : Ctor) (fs : Lis
 def SFold (fut : Bool) (f : Nat) : Prop := ∀ (e : Ast) (st : PState),
   st.syntaxCheckOnly = false → st.futureAnnotations = fut →
   Keep st (fold f e st).2 ∧
-    ((fold f e st).2.fuelOut = false → Clean (skipNarrow fut) (fold f e st).1)
+    ((fold f e st).2.fuelOut = false → Clean (skipWalked fut) (fold f e st).1)
 
 def SList (fut : Bool) (f : Nat) : Prop := ∀ (xs : List Ast) (st : PState),
   st.syntaxCheckOnly = false → st.futureAnnotations = fut →
   Keep st (foldList f xs st).2 ∧
-    ((foldList f xs st).2.fuelOut = false → ∀ x, x ∈ (foldList f xs st).1 → Clean (skipNarrow fut) x)
+    ((foldList f xs st).2.fuelOut = false → ∀ x, x ∈ (foldList f xs st).1 → Clean (skipWalked fut) x)
 
 def SBody (fut : Bool) (f : Nat) : Prop := ∀ (xs : List Ast) (st : PState),
   st.syntaxCheckOnly = false → st.futureAnnotations = fut →
   Keep st (foldBody f xs st).2 ∧
-    ((foldBody f xs st).2.fuelOut = false → ∀ x, x ∈ (foldBody f xs st).1 → Clean (skipNarrow fut) x)
+    ((foldBody f xs st).2.fuelOut = false → ∀ x, x ∈ (foldBody f xs st).1 → Clean (skipWalked fut) x)
 
 def SSteps (fut : Bool) (f : Nat) : Prop := ∀ (ss : List Step) (fs : List Ast) (st : PState),
   st.syntaxCheckOnly = false → st.futureAnnotations = fut →
   Keep st (runSteps f ss fs st).2 ∧
     ((runSteps f ss fs st).2.fuelOut = false →
-      (∀ i, i ∈ stepIdx fut ss → Clean (skipNarrow fut) ((runSteps f ss fs st).1.getD i .null)) ∧
+      (∀ i, i ∈ stepIdx fut ss → Clean (skipWalked fut) ((runSteps f ss fs st).1.getD i .null)) ∧
       (∀ i, i ∉ stepIdx fut ss → (runSteps f ss fs st).1.getD i .null = fs.getD i .null))
 
 theorem walk_zero (fut : Bool) : SFold fut 0 ∧ SList fut 0 ∧ SBody fut 0 ∧ SSteps fut 0 := by
@@ -477,7 +526,7 @@ theorem hide_clean {sk : Ctor → Nat → Bool} (he : sk .Expr 0 = false) (xs : 
     · exact h x (List.mem_cons_of_mem _ h1)
   · exact h
 
-theorem skip_expr (fut : Bool) : skipNarrow fut .Expr 0 = false := by cases fut <;> rfl
+theorem skip_expr (fut : Bool) : skipWalked fut .Expr 0 = false := by cases fut <;> rfl
 
 theorem walk_succ {fut : Bool} {f : Nat} (hF : SFold fut f) (hL : SList fut f) (hB : SBody fut f)
     (hS : SSteps fut f) :
@@ -594,7 +643,7 @@ theorem walk_all (fut : Bool) (f : Nat) : SFold fut f ∧ SList fut f ∧ SBody 
   | zero => exact walk_zero fut
   | succ f ih => exact walk_succ ih.1 ih.2.1 ih.2.2.1 ih.2.2.2
 
-theorem foldReachesNames_proven : FoldReachesNames := by
+theorem foldReachesWalked_proven : FoldReachesWalked := by
   intro fuel st m h1
   obtain ⟨hF, hL, hB, _⟩ := walk_all st.futureAnnotations fuel
   unfold foldMod

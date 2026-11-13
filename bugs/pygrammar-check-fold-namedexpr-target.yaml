@@ -1,0 +1,67 @@
+id: pygrammar-check-fold-namedexpr-target
+title: "The AST folder does not fold a NamedExpr target, so a hand-built Name('__debug__', Load) target survives (scope record, not a bug)"
+priority: P5
+kind: scope-record
+module: pygrammar
+files: [Python/ast_preprocess.c, Python/ast.c]
+functions: ["astfold_expr"]
+summary: |
+  This record exists because the Lean entry `pygrammar-check-fold-reaches-narrow` is a refutation.
+  It puts the scope of the fold theorems on record; it is not a defect report of its own.
+
+  The NamedExpr case of astfold_expr folds the value and not the target. A target that the grammar
+  builds is a Name in Store context, where there is nothing to fold, and compiling
+  `(__debug__ := 1)` is rejected with "cannot assign to __debug__" (Python/symtable.c:1624-1627).
+  A hand-built tree can put
+  Name('__debug__', Load()) there, because validate_expr checks only that the target is a Name.
+  With ast.PyCF_OPTIMIZED_AST that target comes back unfolded, while the same name anywhere the
+  folder walks becomes Constant(True) or Constant(False).
+
+  That the validator lets a Load target through is already recorded as
+  `pygrammar-check-namedexpr-target`; this is one more consequence of it, and fixing that record
+  makes this tree unreachable.
+likelihood: |
+  Very low: only hand-built trees. The parser never produces a NamedExpr target in Load context.
+maybe_intended: |
+  Yes for the folder: a walrus target is a binding, not an expression to fold. The gap is in
+  validation, and that is the other record. Not to be filed separately.
+reproducer: |
+  import ast
+  L = dict(lineno=1, col_offset=0, end_lineno=1, end_col_offset=1)
+  dbg = lambda: ast.Name('__debug__', ast.Load(), **L)
+  walrus = ast.NamedExpr(target=dbg(), value=dbg(), **L)
+  tree = ast.Module(body=[ast.Expr(walrus, **L)], type_ignores=[])
+  out = compile(tree, 'x', 'exec', flags=ast.PyCF_OPTIMIZED_AST, optimize=0)
+  print(ast.dump(out))
+  target, value = out.body[0].value.target, out.body[0].value.value
+  kept = (isinstance(target, ast.Name) and target.id == '__debug__'
+          and isinstance(target.ctx, ast.Load))
+  folded = isinstance(value, ast.Constant) and value.value is True
+  if kept and folded:
+      print('REPRODUCED pygrammar-check-fold-namedexpr-target')
+expected: |
+  (Within the old statement of the entry) no Name('__debug__', Load) is left outside the two
+  pattern fields.
+observed: |
+  Module(body=[Expr(value=NamedExpr(target=Name(id='__debug__'), value=Constant(value=True)))]):
+  the target is kept, the same name as the value is folded.
+tested: "REPRODUCED on python3 3.15.2; not run on main (no main build was available where this was recorded)"
+promised_by: |
+  Nothing; recorded to put the scope limit of the fold theorems on record.
+cause: |
+  Python/ast_preprocess.c:632-634, NamedExpr_kind: `CALL(astfold_expr, expr_ty,
+  node_->v.NamedExpr.value);` and nothing for `target`. Python/ast.c:392-399, validate_expr,
+  NamedExpr_kind: the target is checked to be a Name and is not passed to validate_expr.
+possible_fix: |
+  None needed here. The fix proposed in pygrammar-check-namedexpr-target
+  (validate_expr(target, Store)) rejects this tree.
+lean: |
+  Refuted by foldReachesNames_refuted (lean/PyLean/PyGrammar/Check/FoldProps.lean) on
+  debugInWalrus, the tree of the reproducer; debugInWalrus_folded states the model's output for
+  it, which is the tree printed above. FoldReachesWalked, entry pygrammar-check-fold-reaches-walked, is the statement
+  with NamedExpr.target set aside, and is proven.
+duplicates:
+  issues: []
+  queries: ["NamedExpr target validate", "astfold NamedExpr target __debug__",
+            "walrus target Load context ast validate", "__debug__ NamedExpr optimized ast"]
+  bugforge: "not applicable (not a bug); related record in this repo: pygrammar-check-namedexpr-target"

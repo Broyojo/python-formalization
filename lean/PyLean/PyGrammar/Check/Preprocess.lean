@@ -48,7 +48,7 @@ inductive Step where
 def visits : Ctor → List Step
   -- astfold_expr
   | .BoolOp => [.fld 1]
-  | .NamedExpr => [.fld 0, .fld 1]
+  | .NamedExpr => [.fld 1]  -- the value only, `Python/ast_preprocess.c:632-634`
   | .BinOp => [.fld 0, .fld 2]
   | .UnaryOp => [.fld 1]
   | .Lambda => [.fld 0, .fld 1]

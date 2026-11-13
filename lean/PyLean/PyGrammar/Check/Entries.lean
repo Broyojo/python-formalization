@@ -164,10 +164,27 @@ def entries : List Entry := [
     statement := "With MatchValue values and MatchMapping keys set aside, folding reaches every " ++
       "node-typed field of Python.asdl: no Name('__debug__', Load) survives anywhere else."
     source := "the implementation against Parser/Python.asdl"
-    status := .proven
+    status := .refuted
     prop := ``FoldReachesNames
-    thm := some ``foldReachesNames_proven
-    notes := "Depends on each row of visits: dropping a field from a row breaks coverOK." },
+    thm := some ``foldReachesNames_refuted
+    bug := some "pygrammar-check-fold-namedexpr-target"
+    notes := "The NamedExpr case of astfold_expr folds the value only (Python/ast_preprocess.c:632-634), " ++
+      "and validate_expr accepts a Load target (Python/ast.c:392-399), so the hand-built " ++
+      "NamedExpr(Name('__debug__', Load), ...) keeps its target. The grammar builds Store targets only. " ++
+      "pygrammar-check-fold-reaches-walked is the statement with that field set aside." },
+  { id := "pygrammar-check-fold-reaches-walked"
+    pyFile := "Python/ast_preprocess.c"
+    pyFns := Rows.check_fold_reaches_walked
+    statement := "With folding on, and with MatchValue values, MatchMapping keys, NamedExpr targets and, " ++
+      "under the __future__ import, annotations set aside, folding reaches every node-typed field of " ++
+      "Python.asdl in a module body: no Name('__debug__', Load) is left anywhere else in the folded tree."
+    source := "the implementation against Parser/Python.asdl"
+    status := .proven
+    prop := ``FoldReachesWalked
+    thm := some ``foldReachesWalked_proven
+    notes := "Depends on each row of visits: dropping a field from a row breaks coverOK. The proof is " ++
+      "the one pygrammar-check-fold-reaches-narrow had, with the NamedExpr target set aside. As there, " ++
+      "the statement is about the nodes of the folded tree and does not say the walk keeps every node." },
   { id := "pygrammar-check-fold-docstring"
     pyFile := "Python/ast_preprocess.c"
     pyFns := Rows.check_fold_docstring
