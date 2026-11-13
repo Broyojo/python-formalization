@@ -1,0 +1,76 @@
+id: misc-sched-enter-reentrant-clock
+title: "scheduler.enter: a timefunc (or the + on its result) that schedules an event and then raises leaves that event queued after the failed enter (scope record, not a bug)"
+priority: P5
+kind: scope-record
+module: misc
+files: [Lib/sched.py]
+functions: ["scheduler.enter"]
+summary: |
+  This record exists because the Lean entry `misc-sched-enter-relative` is a refutation. It puts
+  the scope of the enter theorems on record; it is not a defect report.
+
+  enter is `time = self.timefunc() + delay` followed by enterabs. timefunc is whatever callable
+  the scheduler was built with, so it can use the scheduler itself. A timefunc that calls
+  s.enterabs(...) and then raises makes s.enter(...) fail with that exception, and the event the
+  clock scheduled is in the queue afterwards. The same holds for the `+`: it runs the __add__ of
+  what the clock returned, which can schedule and raise too. The entry said that a failing clock
+  or + leaves the queue; that is true only when neither touches the scheduler, which is all the
+  earlier model could express.
+likelihood: |
+  Very low: it needs a clock, or an addition on its result, that schedules events and fails.
+maybe_intended: |
+  Yes. enter does not roll back what the clock or the addition did to the scheduler, and nothing
+  says it should. Not to be filed.
+reproducer: |
+  import sched
+  def action():
+      pass
+  def clock():
+      s.enterabs(0, 0, action)
+      raise RuntimeError('clock')
+  s = sched.scheduler(clock, lambda d: None)
+  try:
+      s.enter(1, 0, action)
+      result = 'no error'
+  except RuntimeError as x:
+      result = 'RuntimeError: %s' % x
+  n = len(s._queue)
+  print(result, n)
+  # the same through the addition: the clock is quiet, the time object's __add__ is not
+  class Now(int):
+      def __add__(self, delay):
+          t.enterabs(0, 0, action)
+          raise RuntimeError('add')
+  t = sched.scheduler(lambda: Now(0), lambda d: None)
+  try:
+      t.enter(1, 0, action)
+      result2 = 'no error'
+  except RuntimeError as x:
+      result2 = 'RuntimeError: %s' % x
+  n2 = len(t._queue)
+  print(result2, n2)
+  if (result, n, result2, n2) == ('RuntimeError: clock', 1, 'RuntimeError: add', 1):
+      print('REPRODUCED misc-sched-enter-reentrant-clock')
+expected: |
+  (Within the old statement of the entry) the queue is as it was before the failed enter: empty.
+observed: |
+  RuntimeError: clock 1, then RuntimeError: add 1: the callback's exception comes out and its
+  event is queued, for the clock and for the addition.
+tested: "REPRODUCED on python3 3.15.2; not run on main (no main build was available where this was recorded)"
+promised_by: |
+  Nothing; recorded to put the scope limit of the enter theorems on record.
+cause: |
+  Lib/sched.py:84-85: `time = self.timefunc() + delay` then `return self.enterabs(...)`. Nothing is
+  undone when timefunc raises, and nothing needs to be.
+possible_fix: |
+  None needed.
+lean: |
+  Refuted by enterRelative_refuted (lean/PyLean/CoreLibs/Misc/Sched/Props.lean) with
+  reentrantClock; reentrant_enter states the model's outcome for the reproducer's first call.
+  EnterRelativeState, entry misc-sched-enter-relative-state, is what holds for every clock and
+  every +.
+duplicates:
+  issues: []
+  queries: ["sched enter timefunc raises queue", "sched scheduler timefunc reentrant enterabs",
+            "sched.scheduler enter exception event left in queue"]
+  bugforge: "not applicable (not a bug)"

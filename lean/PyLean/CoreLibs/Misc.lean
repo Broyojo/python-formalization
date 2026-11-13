@@ -83,7 +83,15 @@ def schedEntries : List Entry := [
     pyFns := ["scheduler.enter"]
     statement := "enter reads the clock once and is enterabs at timefunc() + delay; a failure of the clock or of + leaves the queue."
     source := "docstring of enter"
-    status := .proven, prop := ``Sched.EnterRelative, thm := some ``Sched.enterRelative_proven },
+    status := .refuted, prop := ``Sched.EnterRelative, thm := some ``Sched.enterRelative_refuted
+    bug := some "misc-sched-enter-reentrant-clock"
+    notes := "timefunc is any callable and + any __add__ (Lib/sched.py:84). The model's clock could only reach the world, so the last clause held by construction. With a clock that can call the scheduler it is false: a timefunc that calls enterabs and then raises leaves its event queued after the failed enter. misc-sched-enter-relative-state is what holds." },
+  { id := "misc-sched-enter-relative-state", pyFile := "Lib/sched.py"
+    pyFns := ["scheduler.enter"]
+    statement := "For any callable clock and any +, enter calls the clock once, then +, and is enterabs at that time on the scheduler as those calls left it; when the clock or + raises, enter changes nothing more, so the scheduler is exactly as the failing call left it. For a clock and a + that do not touch the scheduler, a failure leaves the queue as it was."
+    source := "docstring of enter; Lib/sched.py:84-85"
+    status := .proven, prop := ``Sched.EnterRelativeState, thm := some ``Sched.enterRelativeState_proven
+    notes := "The clock and + may call enterabs, enter and cancel and may raise. Rebinding attributes of the scheduler object (s.enterabs = ...) or subclassing it is out of scope: self.enterabs is the method of the class. The comparisons inside enterabs can raise but not re-enter, as in the other sched entries." },
   { id := "misc-sched-enterabs-id", pyFile := "Lib/sched.py"
     pyFns := ["scheduler.enterabs"]
     statement := "enterabs returns the event with its arguments and the old counter as sequence, kwargs defaults to {}, the counter advances, and the queue gains exactly that event."

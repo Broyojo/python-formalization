@@ -10,6 +10,14 @@ receives from outside: the comparisons, the arithmetic, the two clock functions 
 an action. An action gets the scheduler's state because "It is legal for both the delay function
 and the action function to modify the queue" (Lib/sched.py:116-117).
 
+`Env.timefunc` reaches only the world and `Env.add` nothing at all. Python's `timefunc` is any
+callable and `+` runs the `__add__` of what the clock returned or the `__radd__` of `delay`, so
+both can call back into the scheduler; `Clock` and `Plus` are that, and `enterWith` is `enter` with
+them. The comparisons `enterabs` makes stay as `Env` has them: they can raise but not re-enter.
+A scheduler here is its queue, its counter and the world. Code that rebinds attributes of the
+scheduler object (`s.enterabs = ...`, `s.timefunc = ...`) or subclasses it is out of scope:
+`self.enterabs` at Lib/sched.py:85 is always the method above.
+
 `Lock` acquisition has no effect in a single thread and is dropped. Events are ordered as Python
 orders tuples: the first field that differs under `==` decides under `<`.
 -/
@@ -99,6 +107,38 @@ def enter [Inhabited T] [Inhabited P] [Inhabited A] (e : Env T P A V W) (s : Sch
   | .error x => (s, .error x)
   | .ok now =>
     match e.add now delay with
+    | .error x => (s, .error x)
+    | .ok time => enterabs e s time priority action argument kwargs
+
+/-- A `timefunc` as Python allows it: any callable. It gets the scheduler, so it can call
+`enterabs`, `enter` or `cancel` on it, and it can raise. -/
+abbrev Clock (T P A V W : Type) := Sched T P A V W → Sched T P A V W × Py T
+
+/-- The clock of `Env`, which only touches the world. -/
+def worldClock (e : Env T P A V W) : Clock T P A V W := fun s =>
+  let (w, now) := e.timefunc s.world
+  ({ s with world := w }, now)
+
+/-- `self.timefunc() + delay` as Python runs it: the `__add__` or `__radd__` of the operands,
+which get the scheduler like any other code and can raise. -/
+abbrev Plus (T P A V W : Type) := T → T → Sched T P A V W → Sched T P A V W × Py T
+
+/-- The `+` of `Env`, which does not touch the scheduler. -/
+def worldPlus (e : Env T P A V W) : Plus T P A V W := fun a b s => (s, e.add a b)
+
+/-- `scheduler.enter`, Lib/sched.py:78-85, with any callable as the clock and any `+`: `time =
+self.timefunc() + delay`, then `enterabs`, each step on the scheduler as the one before left it.
+`enter` above is this with `worldClock` and `worldPlus`. -/
+def enterWith [Inhabited T] [Inhabited P] [Inhabited A] (e : Env T P A V W)
+    (clock : Clock T P A V W) (plus : Plus T P A V W) (s : Sched T P A V W)
+    (delay : T) (priority : P) (action : A) (argument : List V)
+    (kwargs : Option (List (String × V))) : Sched T P A V W × Py (Event T P A V) :=
+  let (s, now) := clock s
+  match now with
+  | .error x => (s, .error x)
+  | .ok now =>
+    let (s, time) := plus now delay s
+    match time with
     | .error x => (s, .error x)
     | .ok time => enterabs e s time priority action argument kwargs
 

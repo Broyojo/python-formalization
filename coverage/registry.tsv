@@ -4098,7 +4098,8 @@ misc-graphlib-no-report-no-cycle	proven	Lib/graphlib.py	TopologicalSorter._find_
 misc-graphlib-find-cycle-total	proven	Lib/graphlib.py	TopologicalSorter._find_cycle
 misc-graphlib-static-order	proven	Lib/graphlib.py	TopologicalSorter.static_order,TopologicalSorter.prepare,TopologicalSorter.get_ready,TopologicalSorter.done,TopologicalSorter.is_active,TopologicalSorter._find_cycle
 misc-sched-queue-ordered	proven	Lib/sched.py	scheduler.__init__,scheduler.enterabs,scheduler.enter,scheduler.cancel,scheduler.queue
-misc-sched-enter-relative	proven	Lib/sched.py	scheduler.enter
+misc-sched-enter-relative	refuted	Lib/sched.py	scheduler.enter
+misc-sched-enter-relative-state	proven	Lib/sched.py	scheduler.enter
 misc-sched-enterabs-id	proven	Lib/sched.py	scheduler.enterabs
 misc-sched-empty	proven	Lib/sched.py	scheduler.empty
 misc-sched-cancel-absent	proven	Lib/sched.py	scheduler.cancel
