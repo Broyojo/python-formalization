@@ -1,0 +1,52 @@
+diff --git a/Lib/difflib.py b/Lib/difflib.py
+index 54fc57d..0c0017a 100644
+--- a/Lib/difflib.py
++++ b/Lib/difflib.py
+@@ -570,7 +570,9 @@ def get_grouped_opcodes(self, n=3):
+           ('equal', 35, 38, 31, 34)]]
+         """
+ 
+-        codes = self.get_opcodes()
++        # Copy, since get_opcodes() returns the cached list and it is
++        # modified below.
++        codes = list(self.get_opcodes())
+         if not codes:
+             codes = [("equal", 0, 1, 0, 1)]
+         # Fixup leading and trailing groups if they show no changes.
+diff --git a/Lib/test/test_difflib.py b/Lib/test/test_difflib.py
+index 8c554d7..83711c8 100644
+--- a/Lib/test/test_difflib.py
++++ b/Lib/test/test_difflib.py
+@@ -179,6 +179,23 @@ def test_matching_blocks_cache(self):
+         self.assertEqual(second[1].size, 2)
+         self.assertEqual(second[2].size, 0)
+ 
++    def test_grouped_opcodes_keep_cached_opcodes(self):
++        # get_grouped_opcodes() must not modify the list cached by
++        # get_opcodes().
++        a = 'abcdefghxijklmnop'
++        b = 'abcdefghyijklmnop'
++        s = difflib.SequenceMatcher(None, a, b)
++        opcodes = list(s.get_opcodes())
++        self.assertEqual(list(s.get_grouped_opcodes(1)),
++                         [[('equal', 7, 8, 7, 8),
++                           ('replace', 8, 9, 8, 9),
++                           ('equal', 9, 10, 9, 10)]])
++        self.assertEqual(s.get_opcodes(), opcodes)
++        self.assertEqual(list(s.get_grouped_opcodes(3)),
++                         [[('equal', 5, 8, 5, 8),
++                           ('replace', 8, 9, 8, 9),
++                           ('equal', 9, 12, 9, 12)]])
++
+     def test_added_tab_hint(self):
+         # Check fix for bug #1488943
+         diff = list(difflib.Differ().compare(["\tI am a buggy"],["\t\tI am a bug"]))
+diff --git a/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.Qm7tKc.rst b/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.Qm7tKc.rst
+new file mode 100644
+index 0000000..6486bc0
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.Qm7tKc.rst
+@@ -0,0 +1,3 @@
++Fix :meth:`difflib.SequenceMatcher.get_grouped_opcodes` changing the list
++cached by :meth:`~difflib.SequenceMatcher.get_opcodes`, which made later calls
++on the same matcher return wrong results.

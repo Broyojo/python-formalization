@@ -1,0 +1,58 @@
+diff --git a/Lib/email/_header_value_parser.py b/Lib/email/_header_value_parser.py
+index f396f4f..d2e4869 100644
+--- a/Lib/email/_header_value_parser.py
++++ b/Lib/email/_header_value_parser.py
+@@ -1042,9 +1042,9 @@ def _get_ptext_to_endchars(value, endchars):
+     a flag that is True iff there were any quoted printables decoded.
+ 
+     """
+-    if not value:
+-        return '', '', False
+     fragment, *remainder = _wsp_splitter(value, 1)
++    if not fragment:
++        return '', value, False
+     vchars = []
+     escape = False
+     had_qp = False
+diff --git a/Lib/test/test_email/test__header_value_parser.py b/Lib/test/test_email/test__header_value_parser.py
+index 26e9249..bfeae9d 100644
+--- a/Lib/test/test_email/test__header_value_parser.py
++++ b/Lib/test/test_email/test__header_value_parser.py
+@@ -1377,6 +1377,10 @@ def test_get_dtext_empty(self):
+         self._test_get_x(parser.get_dtext,
+                         '', '', '', [], '')
+ 
++    def test_get_dtext_leading_wsp(self):
++        self._test_get_x(parser.get_dtext,
++                        ' foo]', '', '', [], ' foo]')
++
+     # get_domain_literal
+ 
+     def test_get_domain_literal_only(self):
+@@ -2897,6 +2901,17 @@ def test_parse_message_id_with_invalid_domain(self):
+         self.assertEqual(str(message_id.all_defects[-1]),
+                          "end of input inside domain-literal")
+ 
++    def test_parse_message_id_with_wsp_in_literal(self):
++        message_id = self._test_parse_x(
++            parser.parse_message_id,
++            "<T@[ x]>",
++            "<T@[ x]>",
++            "<T@[ x]>",
++            [errors.ObsoleteHeaderDefect],
++            [],
++            )
++        self.assertEqual(message_id.token_type, 'message-id')
++
+     def test_parse_message_id_with_remaining(self):
+         message_id = self._test_parse_x(
+             parser.parse_message_id,
+diff --git a/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.5uJt0w.rst b/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.5uJt0w.rst
+new file mode 100644
+index 0000000..5634850
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.5uJt0w.rst
+@@ -0,0 +1,3 @@
++Fix :exc:`UnboundLocalError` in :mod:`email` header parsing when a
++domain literal in a ``Message-ID``, ``References`` or ``In-Reply-To``
++header starts with whitespace, such as ``<a@[ x]>``.

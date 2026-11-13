@@ -1,0 +1,54 @@
+diff --git a/Lib/test/test_cmath.py b/Lib/test/test_cmath.py
+index a986fd6..413fc60 100644
+--- a/Lib/test/test_cmath.py
++++ b/Lib/test/test_cmath.py
+@@ -406,6 +406,17 @@ def polar_with_errno_set(z):
+                 _testcapi.set_errno(0)
+         self.check_polar(polar_with_errno_set)
+ 
++    def test_log_base_domain_error(self):
++        # log(0, base) raises like log(0), whatever the base.
++        for z in [0, 0.0, -0.0, 0j, complex(-0.0, -0.0)]:
++            for base in [2, 10, 0.5, -1, 1j, 2+3j, 1e-320, INF, NAN]:
++                with self.subTest(z=z, base=base):
++                    self.assertRaises(ValueError, cmath.log, z, base)
++        for base in [0, 0j, 1]:
++            with self.subTest(base=base):
++                self.assertRaises(ValueError, cmath.log, 2, base)
++        self.assertRaises(TypeError, cmath.log, 0, 'spam')
++
+     @unittest.skipIf(sys.platform.startswith("sunos"),
+                      "skipping, see gh-138573")
+     def test_phase(self):
+diff --git a/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.Lq7mWd.rst b/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.Lq7mWd.rst
+new file mode 100644
+index 0000000..e04b191
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-XXXXXX.Lq7mWd.rst
+@@ -0,0 +1,3 @@
++:func:`cmath.log` now raises :exc:`ValueError` for a zero argument when a
++*base* is given, like it does without one, instead of returning a value such as
++``(-inf+nanj)``.
+diff --git a/Modules/cmathmodule.c b/Modules/cmathmodule.c
+index e756b55..aeeeb99 100644
+--- a/Modules/cmathmodule.c
++++ b/Modules/cmathmodule.c
+@@ -961,12 +961,18 @@ cmath_log_impl(PyObject *module, Py_complex x, PyObject *y_obj)
+     errno = 0;
+     x = c_log(x);
+     if (y_obj != NULL) {
++        /* c_log() clears errno on success, so keep the error from log(z). */
++        int log_errno = errno;
++
+         y = PyComplex_AsCComplex(y_obj);
+         if (PyErr_Occurred()) {
+             return NULL;
+         }
+         y = c_log(y);
+         x = _Py_c_quot(x, y);
++        if (errno == 0) {
++            errno = log_errno;
++        }
+     }
+     if (errno != 0)
+         return math_error();
