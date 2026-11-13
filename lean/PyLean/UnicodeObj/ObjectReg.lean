@@ -94,9 +94,10 @@ def objectEntries : List Entry := [
     status := .proven, prop := ``AsciiDecodeSpec, thm := some ``asciiDecodeSpec_proven },
   { id := "unicodeobj-writer-decode-any-handler", pyFile := "Objects/unicodeobject.c"
     pyFns := ["_PyUnicode_DecodeUTF8Writer"]
-    statement := "Decoding into a writer, with any handler, adds what bytes.decode gives, or raises the same exception with none of the text kept; a success keeps the capacity what the text needs."
-    source := "implementation against itself: the writer entry against unicode_decode_utf8_impl"
-    status := .proven, prop := ``WriterDecodeX, thm := some ``writerDecodeX_proven },
+    statement := "_PyUnicode_DecodeUTF8Writer, with any handler, adds what the UTF-8 decoder behind bytes.decode gives (the stateful one when consumed is passed), and a success keeps the capacity what the text needs when it was so before. When the decoder raises, it returns the same exception and does not put writer->pos back. Either way the writer ends with the old text followed by exactly what the loop of unicode_decode_utf8_impl, run on the whole input without the ASCII fast path, had written when it stopped (for b'a\\xff' with the strict handler on a new writer the a stays). Followed by the put back of pos that PyUnicodeWriter_WriteUTF8 and PyUnicodeWriter_DecodeUTF8Stateful do, it is decodeWriterX, the model unicodeobj-writer-decode-stateful-any-handler is built on, where none of the text is kept."
+    source := "implementation against itself: the writer entry against unicode_decode_utf8_impl; Objects/unicodeobject.c:5404-5441, 5302-5305; Objects/unicode_writer.c:504-508, 526-531"
+    status := .proven, prop := ``WriterDecodeRawX, thm := some ``writerDecodeRawX_proven
+    notes := "The earlier statement credited this function with keeping none of the text on failure. That is done by its two public callers; unicodeobj-writer-decode-stateful-any-handler states it for PyUnicodeWriter_DecodeUTF8Stateful." },
   { id := "unicodeobj-writer-decode-stateful-any-handler", pyFile := "Objects/unicode_writer.c"
     pyFns := ["PyUnicodeWriter_DecodeUTF8Stateful"]
     statement := "PyUnicodeWriter_DecodeUTF8Stateful, for any size and handler, gives the text of the decoder and sets *consumed, and on a failure rolls the text back and sets *consumed to 0."
