@@ -41,7 +41,7 @@ Modules/_datetimemodule.c	1348	1352	new_time_ex	new_time_ex(int hour, int minute
 Modules/_datetimemodule.c	1358	1373	new_time_subclass_fold_ex	new_time_subclass_fold_ex(int hour, int minute, int second, int usecond, PyObject *tzinfo, int fold, PyTypeObject *cls)	modelled	datetime-subclass-fold-twins,datetime-time-replace-int	
 Modules/_datetimemodule.c	1384	1411	new_delta_ex	new_delta_ex(int days, int seconds, int microseconds, int normalize, PyTypeObject *type)	modelled	datetime-new-delta-ex,datetime-timedelta-ctor-obj	
 Modules/_datetimemodule.c	1431	1453	create_timezone	create_timezone(PyObject *offset, PyObject *name)	modelled	datetime-timezone-new	
-Modules/_datetimemodule.c	1459	1479	new_timezone	new_timezone(PyObject *offset, PyObject *name)	modelled	datetime-timezone-new,datetime-timezone-range	
+Modules/_datetimemodule.c	1459	1479	new_timezone	new_timezone(PyObject *offset, PyObject *name)	modelled	datetime-timezone-new,datetime-timezone-new-arg,datetime-timezone-new-arg-exact,datetime-timezone-range	
 Modules/_datetimemodule.c	1489	1498	check_tzinfo_subclass	check_tzinfo_subclass(PyObject *p)	modelled	datetime-check-tzinfo-arg,datetime-datetime-ctor,datetime-time-ctor	
 Modules/_datetimemodule.c	1505	1515	get_tzinfo_member	get_tzinfo_member(PyObject *self)	modelled	datetime-tzinfo-member-replacements,datetime-strftime-z-twins,datetime-strftime-z-override-twins	
 Modules/_datetimemodule.c	1525	1560	call_tzinfo_method	call_tzinfo_method(PyObject *tzinfo, const char *name, PyObject *tzinfoarg)	modelled	datetime-datetime-offsets,datetime-time-offsets	
@@ -140,7 +140,7 @@ Modules/_datetimemodule.c	4160	4163	tzinfo_utcoffset	tzinfo_utcoffset(PyObject *
 Modules/_datetimemodule.c	4166	4169	tzinfo_dst	tzinfo_dst(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(dt))	modelled	datetime-tzinfo-base,datetime-tzinfo-base-dispatch	
 Modules/_datetimemodule.c	4179	4249	tzinfo_fromutc	tzinfo_fromutc(PyObject *self, PyObject *dt)	todo		
 Modules/_datetimemodule.c	4257	4283	tzinfo_reduce	tzinfo_reduce(PyObject *self, PyObject *Py_UNUSED(dummy))	modelled	datetime-tzinfo-reduce-cls,datetime-tzinfo-reduce-body,datetime-tzinfo-reduce-twins,datetime-tzinfo-reduce-twins-truthy	
-Modules/_datetimemodule.c	4363	4367	timezone_new_impl	timezone_new_impl(PyTypeObject *type, PyObject *offset, PyObject *name) /*[clinic end generated code: output=41a2dda500424187 input=d51255afe60382cd]*/	modelled	datetime-timezone-new,datetime-timezone-new-arg	
+Modules/_datetimemodule.c	4363	4367	timezone_new_impl	timezone_new_impl(PyTypeObject *type, PyObject *offset, PyObject *name) /*[clinic end generated code: output=41a2dda500424187 input=d51255afe60382cd]*/	modelled	datetime-timezone-new,datetime-timezone-new-arg,datetime-timezone-new-arg-exact	
 Modules/_datetimemodule.c	4370	4376	timezone_dealloc	timezone_dealloc(PyObject *op)	excluded		no-behaviour: allocation, reference counting and GC traversal, with no Python-visible effect
 Modules/_datetimemodule.c	4379	4389	timezone_richcompare	timezone_richcompare(PyObject *self, PyObject *other, int op)	modelled	datetime-timezone-richcompare	
 Modules/_datetimemodule.c	4392	4396	timezone_hash	timezone_hash(PyObject *op)	modelled	datetime-timezone-hash,datetime-timezone-methods	

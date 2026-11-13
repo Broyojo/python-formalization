@@ -86,6 +86,76 @@ def timezoneNewArgC (oid : Nat) (offset : Option Delta) (name : TzName) : Py Tz 
   | none => .error (.typeError "~timezone() argument 'offset' must be datetime.timedelta")
   | some o => timezoneNewC oid o name
 
+/-- The `offset` argument of `timezone(offset, name)` as an object. `other` is an ordinary object
+that neither twin takes for a `timedelta`; `delta o` an exact `timedelta`; `sub o truth geMin
+leMax` an instance of a `timedelta` subclass with the stored value `o`, where `truth` is the
+outcome of its truth test (`not offset`, Py:2466), `geMin` the outcome of `cls._minoffset <=
+offset` and `leMax` that of `offset <= cls._maxoffset` (Py:2471). Each is the truth value the `if`
+ends up with, after any `NotImplemented` fallback and the conversion to `bool`, or the exception
+raised on the way; it is not the raw return value of the method. A subclass can override
+`__bool__`, `__ge__` (which Python tries first for `_minoffset <= offset`, the right operand being
+of a subclass, Objects/object.c:1055) and `__le__`, or the helpers `_cmp` and `_getstate` the
+inherited comparisons use, so the three are free.
+
+Out of scope: an object whose `__class__` misreports its type or raises (`isinstance` at Py:2463
+consults it, the clinic check does not); a subclass whose `__repr__` raises (both twins format
+the offset into the range `ValueError`, Py:2474 and `_datetimemodule.c:1472-1474`); side effects
+of these methods, such as changing the object's fields between the calls; and the identity of
+the offset the new `timezone` holds, since `TzKind.timezone` keeps its value only. -/
+inductive TzOffsetArg where
+  | other
+  | delta (o : Delta)
+  | sub (o : Delta) (truth geMin leMax : Py Bool)
+
+/-- The stored fields are those of a `timedelta`. -/
+def TzOffsetArg.Valid : TzOffsetArg → Prop
+  | .other => True
+  | .delta o => o.Valid
+  | .sub o _ _ _ => o.Valid
+
+/-- `if not cls._minoffset <= offset <= cls._maxoffset: raise ValueError(...)` and
+`cls._create(offset, name)`, Py:2471-2475, on a subclass instance: the chained comparison asks
+the object, left comparison first, and stops at the first false or raising one. -/
+def timezoneRangeSubPy (oid : Nat) (o : Delta) (geMin leMax : Py Bool) (name : Option String) :
+    Py Tz :=
+  let bad : Py Tz := .error (.valueError
+    "~offset must be a timedelta strictly between -timedelta(hours=24) and timedelta(hours=24)")
+  match geMin with
+  | .error e => .error e
+  | .ok false => bad
+  | .ok true =>
+    match leMax with
+    | .error e => .error e
+    | .ok false => bad
+    | .ok true => .ok ⟨oid, .timezone o name⟩
+
+/-- `timezone.__new__(cls, offset, name)`, Py:2462-2475, on any `offset` object. An exact
+`timedelta` is `timezoneNewPy`. A subclass instance is asked for its truth (:2466) and for the
+two comparisons (:2471), in that order. -/
+def timezoneNewObjPy (oid : Nat) (offset : TzOffsetArg) (name : TzName) : Py Tz :=
+  match offset with
+  | .other => .error (.typeError "offset must be a timedelta")
+  | .delta o => timezoneNewPy oid o name
+  | .sub o truth geMin leMax =>
+    match name with
+    | .omitted =>
+      match truth with
+      | .error e => .error e
+      | .ok false => .ok tzUTC
+      | .ok true => timezoneRangeSubPy oid o geMin leMax none
+    | .other => .error (.typeError "name must be a string")
+    | .str s => timezoneRangeSubPy oid o geMin leMax (some s)
+
+/-- `timezone_new`, clinic/_datetimemodule.c.h:670-730, and `new_timezone`, :1459-1479, on any
+`offset` object. `PyDelta_Check` accepts a subclass instance, and `delta_bool` (:1465) and the
+range test (:1468-1471) read its stored fields, so its truth and comparison methods are never
+called. -/
+def timezoneNewObjC (oid : Nat) (offset : TzOffsetArg) (name : TzName) : Py Tz :=
+  match offset with
+  | .other => .error (.typeError "~timezone() argument 'offset' must be datetime.timedelta")
+  | .delta o => timezoneNewC oid o name
+  | .sub o _ _ _ => timezoneNewC oid o name
+
 /-- The constructor arguments `timezone.__getinitargs__()` returns. -/
 inductive TzInitArgs where
   | one (offset : Delta)

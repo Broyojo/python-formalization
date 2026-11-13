@@ -280,7 +280,8 @@ datetime-mktime-local-twins-all	refuted	Lib/_pydatetime.py	datetime._mktime,C lo
 datetime-local-timezone-twins	proven	Lib/_pydatetime.py	datetime._local_timezone,datetime._mktime,C local_timezone_from_local,C local_to_seconds
 datetime-local-timezone-twins-all	refuted	Lib/_pydatetime.py	datetime._local_timezone,C local_timezone_from_local
 datetime-timezone-method-args	proven	Lib/_pydatetime.py	timezone.utcoffset,timezone.tzname,timezone.dst,timezone.fromutc,C timezone_utcoffset,C timezone_tzname,C timezone_dst,C timezone_fromutc,C _timezone_check_argument
-datetime-timezone-new-arg	proven	Lib/_pydatetime.py	timezone.__new__,C timezone_new_impl
+datetime-timezone-new-arg	refuted	Lib/_pydatetime.py	timezone.__new__,C timezone_new_impl,C new_timezone
+datetime-timezone-new-arg-exact	proven	Lib/_pydatetime.py	timezone.__new__,C timezone_new_impl,C new_timezone
 datetime-timezone-getinitargs	proven	Lib/_pydatetime.py	timezone.__getinitargs__,C timezone_getinitargs
 datetime-timezone-hash	proven	Lib/_pydatetime.py	timezone.__hash__,C timezone_hash
 datetime-combine-args	proven	Lib/_pydatetime.py	datetime.combine,C datetime_datetime_combine_impl
