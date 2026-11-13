@@ -90,7 +90,7 @@ def lex_comment_loops : List String := [
   ]
 
 def lex_exact_tokens : List String := [
-  ]
+  "_PyToken_OneChar", "_PyToken_TwoChars", "_PyToken_ThreeChars"]
 
 def lex_nextc_in_buffer : List String := [
   ]

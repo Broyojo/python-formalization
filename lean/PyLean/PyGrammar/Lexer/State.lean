@@ -432,13 +432,153 @@ def exactLookup (cs : List Nat) : Nat :=
   | some (_, k) => k.num
   | none => TokKind.OP.num
 
-/-- `_PyToken_OneChar` -/
+/-- The lexer's stand-in for `_PyToken_OneChar`: a lookup in `exactTable`. -/
 def oneChar (c : Int) : Nat := exactLookup [c.toNat]
-/-- `_PyToken_TwoChars`; `EOF` matches nothing. -/
+/-- The lexer's stand-in for `_PyToken_TwoChars`; `EOF` matches nothing. -/
 def twoChars (a b : Int) : Nat :=
   if b < 0 then TokKind.OP.num else exactLookup [a.toNat, b.toNat]
-/-- `_PyToken_ThreeChars` -/
+/-- The lexer's stand-in for `_PyToken_ThreeChars`. -/
 def threeChars (a b c : Int) : Nat :=
   if c < 0 then TokKind.OP.num else exactLookup [a.toNat, b.toNat, c.toNat]
+
+/-! The three functions as `Parser/token.c` has them, transcribed case by case. The lexer above
+does not call these: it looks spellings up in `exactTable`. `ExactTokensResolve` says the two
+agree on every argument. -/
+
+/-- `_PyToken_OneChar`, `Parser/token.c:84-113`, switch by switch. A `break` falls to `return OP`. -/
+def tokenOneChar (c1 : Int) : Nat :=
+  match c1 with
+  | 33 => TokKind.EXCLAMATION.num  -- '!'
+  | 37 => TokKind.PERCENT.num  -- '%'
+  | 38 => TokKind.AMPER.num  -- '&'
+  | 40 => TokKind.LPAR.num  -- '('
+  | 41 => TokKind.RPAR.num  -- ')'
+  | 42 => TokKind.STAR.num  -- '*'
+  | 43 => TokKind.PLUS.num  -- '+'
+  | 44 => TokKind.COMMA.num  -- ','
+  | 45 => TokKind.MINUS.num  -- '-'
+  | 46 => TokKind.DOT.num  -- '.'
+  | 47 => TokKind.SLASH.num  -- '/'
+  | 58 => TokKind.COLON.num  -- ':'
+  | 59 => TokKind.SEMI.num  -- ';'
+  | 60 => TokKind.LESS.num  -- '<'
+  | 61 => TokKind.EQUAL.num  -- '='
+  | 62 => TokKind.GREATER.num  -- '>'
+  | 64 => TokKind.AT.num  -- '@'
+  | 91 => TokKind.LSQB.num  -- '['
+  | 93 => TokKind.RSQB.num  -- ']'
+  | 94 => TokKind.CIRCUMFLEX.num  -- '^'
+  | 123 => TokKind.LBRACE.num  -- '{'
+  | 124 => TokKind.VBAR.num  -- '|'
+  | 125 => TokKind.RBRACE.num  -- '}'
+  | 126 => TokKind.TILDE.num  -- '~'
+  | _ => TokKind.OP.num
+
+/-- `_PyToken_TwoChars`, `Parser/token.c:116-197`, switch by switch. A `break` falls to `return OP`. -/
+def tokenTwoChars (c1 c2 : Int) : Nat :=
+  match c1 with
+  | 33 =>  -- '!'
+    match c2 with
+    | 61 => TokKind.NOTEQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 37 =>  -- '%'
+    match c2 with
+    | 61 => TokKind.PERCENTEQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 38 =>  -- '&'
+    match c2 with
+    | 61 => TokKind.AMPEREQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 42 =>  -- '*'
+    match c2 with
+    | 42 => TokKind.DOUBLESTAR.num  -- '*'
+    | 61 => TokKind.STAREQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 43 =>  -- '+'
+    match c2 with
+    | 61 => TokKind.PLUSEQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 45 =>  -- '-'
+    match c2 with
+    | 61 => TokKind.MINEQUAL.num  -- '='
+    | 62 => TokKind.RARROW.num  -- '>'
+    | _ => TokKind.OP.num
+  | 47 =>  -- '/'
+    match c2 with
+    | 47 => TokKind.DOUBLESLASH.num  -- '/'
+    | 61 => TokKind.SLASHEQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 58 =>  -- ':'
+    match c2 with
+    | 61 => TokKind.COLONEQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 60 =>  -- '<'
+    match c2 with
+    | 60 => TokKind.LEFTSHIFT.num  -- '<'
+    | 61 => TokKind.LESSEQUAL.num  -- '='
+    | 62 => TokKind.NOTEQUAL.num  -- '>'
+    | _ => TokKind.OP.num
+  | 61 =>  -- '='
+    match c2 with
+    | 61 => TokKind.EQEQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 62 =>  -- '>'
+    match c2 with
+    | 61 => TokKind.GREATEREQUAL.num  -- '='
+    | 62 => TokKind.RIGHTSHIFT.num  -- '>'
+    | _ => TokKind.OP.num
+  | 64 =>  -- '@'
+    match c2 with
+    | 61 => TokKind.ATEQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 94 =>  -- '^'
+    match c2 with
+    | 61 => TokKind.CIRCUMFLEXEQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | 124 =>  -- '|'
+    match c2 with
+    | 61 => TokKind.VBAREQUAL.num  -- '='
+    | _ => TokKind.OP.num
+  | _ => TokKind.OP.num
+
+/-- `_PyToken_ThreeChars`, `Parser/token.c:200-250`, switch by switch. A `break` falls to `return OP`. -/
+def tokenThreeChars (c1 c2 c3 : Int) : Nat :=
+  match c1 with
+  | 42 =>  -- '*'
+    match c2 with
+    | 42 =>  -- '*'
+      match c3 with
+      | 61 => TokKind.DOUBLESTAREQUAL.num  -- '='
+      | _ => TokKind.OP.num
+    | _ => TokKind.OP.num
+  | 46 =>  -- '.'
+    match c2 with
+    | 46 =>  -- '.'
+      match c3 with
+      | 46 => TokKind.ELLIPSIS.num  -- '.'
+      | _ => TokKind.OP.num
+    | _ => TokKind.OP.num
+  | 47 =>  -- '/'
+    match c2 with
+    | 47 =>  -- '/'
+      match c3 with
+      | 61 => TokKind.DOUBLESLASHEQUAL.num  -- '='
+      | _ => TokKind.OP.num
+    | _ => TokKind.OP.num
+  | 60 =>  -- '<'
+    match c2 with
+    | 60 =>  -- '<'
+      match c3 with
+      | 61 => TokKind.LEFTSHIFTEQUAL.num  -- '='
+      | _ => TokKind.OP.num
+    | _ => TokKind.OP.num
+  | 62 =>  -- '>'
+    match c2 with
+    | 62 =>  -- '>'
+      match c3 with
+      | 61 => TokKind.RIGHTSHIFTEQUAL.num  -- '='
+      | _ => TokKind.OP.num
+    | _ => TokKind.OP.num
+  | _ => TokKind.OP.num
 
 end PyLean.PyGrammar.Lexer
