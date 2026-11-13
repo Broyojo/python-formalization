@@ -454,9 +454,9 @@ def entries : List Entry := GenObj.entries ++ [
     source := "Python/bytecodes.c:393-398"
     status := .proven, prop := ``EndForRules, thm := some ``endForRules_proven },
   { id := "bytecode-frame-swap-shallow", pyFile := "Objects/frameobject.c"
-    pyFns := ["stack_swap", "peek"]
-    statement := "stack_swap is correct while its result fits 32 bits (at most ten stack entries): there the truncating version equals the full 64-bit computation."
-    source := "stack_swap, Objects/frameobject.c:1239-1249"
+    pyFns := ["stack_swap", "peek", "push_value", "top_of_stack"]
+    statement := "On a stack of at most ten entries stack_swap(stack, n), for n from 1 to 10, is a swap: read back through peek at every depth from 1 to 21, the old entry n is on top, the old top is at depth n, and every other depth is unchanged, so the 32-bit narrowing of the return value loses nothing there. peek reads the entries in push order at those depths: kind 0 on the empty stack, and after a push_value that does not overflow, of a three-bit kind, a non-negative int64 with that kind at depth 1 and every earlier entry one deeper. top_of_stack is peek at depth 1 on every stack. As before, the model's truncating stack_swap equals its 64-bit computation whenever that result fits 32 bits."
+    source := "peek and stack_swap, Objects/frameobject.c:1232-1249; push_value, :1207-1216; top_of_stack, :1226-1230"
     status := .proven, prop := ``FrameObj.StackSwapShallow, thm := some ``FrameObj.stackSwapShallow_proven },
   { id := "bytecode-frame-first-line", pyFile := "Objects/frameobject.c"
     pyFns := ["first_line_not_before", "marklines"]

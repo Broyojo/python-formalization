@@ -49,17 +49,166 @@ theorem stackSwapKeepsStack_refuted : ¬StackSwapKeepsStack := by
   have := h deepIters 2 (by decide) (by decide)
   exact absurd this (by decide)
 
-/-- What remains true: `stack_swap` is right while the result fits 32 bits, that is
-for at most ten entries. -/
+/-- What remains true: on a stack of at most ten entries `stack_swap` is a swap. `peek`
+reads the entries in push order: nothing on the empty stack, the kind just pushed at depth 1
+and every earlier entry one deeper. Read back through it, `stack_swap s n` has the old
+entry `n` on top, the old top at depth `n`, and every other depth as it was, so the
+narrowing of the return value loses nothing here.
+
+Hypotheses. `1 ≤ n` is the assert at line 1242; `s < 2 ^ 30` and `n ≤ 10` say the stack and
+the depth stay within ten entries, and `StackSwapKeepsStack` above is the record of what
+happens beyond that. `1 ≤ m` is the assert of `peek`, line 1235, and `m ≤ 21` is
+`MAX_STACK_ENTRIES`, line 1202, the deepest entry a stack can hold. `0 ≤ s`, `s < 2 ^ 60`
+and `k < 8` select the branch of `push_value` that pushes, with a three-bit kind; its
+result is a non-negative `int64_t`, so the 21 entries read back determine it. The branch
+that returns `OVERFLOWED` is not part of this statement. `top_of_stack` is `peek` at depth
+1 on every stack, which is how `stack_swap` reads the old top.
+
+The last conjunct is the earlier form of this entry, kept so that nothing it said is
+dropped. It compares the model with its own 64-bit helper and pins no behaviour by itself. -/
 def StackSwapShallow : Prop :=
+  (∀ m, 1 ≤ m → m ≤ 21 → peek EMPTY_STACK m = 0) ∧
+  (∀ (s : Int) (k m : Nat), 0 ≤ s → s < 2 ^ 60 → k < 8 → 1 ≤ m → m + 1 ≤ 21 →
+    (0 ≤ pushValue s k ∧ pushValue s k < 2 ^ 63) ∧
+      peek (pushValue s k) 1 = k ∧ peek (pushValue s k) (m + 1) = peek s m) ∧
+  (∀ s : Int, topOfStack s = peek s 1) ∧
+  (∀ (s : Int) (n m : Nat), 0 ≤ s → s < 2 ^ 30 → 1 ≤ n → n ≤ 10 → 1 ≤ m → m ≤ 21 →
+    peek (stackSwap s n) m =
+      if m = 1 then peek s n else if m = n then peek s 1 else peek s m) ∧
   ∀ (s : Int) (n : Nat), 0 ≤ stackSwap64 s n → stackSwap64 s n < 2 ^ 32 →
     stackSwap s n = stackSwap64 s n
 
+/-- `peek` with the shift and the mask as a division and a remainder. -/
+theorem peek_eq (s : Int) (m : Nat) :
+    peek s m = ((s / (2 : Int) ^ (3 * (m - 1))) % 8).toNat := by
+  unfold peek
+  rw [Int.fdiv_eq_ediv_of_nonneg _ (Int.pow_nonneg (by decide)),
+    Int.fmod_eq_emod_of_nonneg _ (by decide)]
+
+/-- Below the bottom of a stack of at most ten entries `peek` reads kind 0. -/
+theorem peek_deep (x : Int) (m : Nat) (h0 : 0 ≤ x) (h1 : x < 2 ^ 30) (hm : 11 ≤ m) :
+    peek x m = 0 := by
+  rw [peek_eq]
+  obtain ⟨j, hj⟩ : ∃ j, 3 * (m - 1) = 30 + j := ⟨3 * (m - 1) - 30, by omega⟩
+  have hp : (0 : Int) < (2 : Int) ^ j := Int.pow_pos (by decide)
+  have hlt : x < (2 : Int) ^ (3 * (m - 1)) := by
+    rw [hj, Int.pow_add]
+    simp only [Int.reducePow] at h1 ⊢
+    omega
+  rw [Int.ediv_eq_zero_of_lt h0 hlt]
+  rfl
+
+/-- The model's 64-bit helper `stackSwap64` in closed form: with `d` the entry at depth `n`
+and `t` the top, the entry at depth `n` gains `t - d` and the top loses it. This is
+arithmetic on the helper, for every `Int` and depth; it says nothing about C where C's
+`int` shifts overflow (`n > 10`). -/
+theorem stackSwap64_eq (s : Int) (n : Nat) :
+    stackSwap64 s n =
+      s + (s % 8 - s / (2 : Int) ^ (3 * (n - 1)) % 8) * ((2 : Int) ^ (3 * (n - 1)) - 1) := by
+  unfold stackSwap64 topOfStack
+  simp only [peek_eq]
+  rw [Int.fmod_eq_emod_of_nonneg _ (by decide), Int.fmod_eq_emod_of_nonneg _ (by decide),
+    Int.toNat_of_nonneg (Int.emod_nonneg _ (by decide)),
+    Int.toNat_of_nonneg (Int.emod_nonneg _ (by decide))]
+  generalize hd : s / (2 : Int) ^ (3 * (n - 1)) % 8 = d
+  generalize ht : s % 8 = t
+  -- the low three bits of `replaced_low` are still the top
+  have hx : (s - d * (2 : Int) ^ (3 * (n - 1)) + t * (2 : Int) ^ (3 * (n - 1))) % 8 = t := by
+    by_cases h1 : 3 * (n - 1) = 0
+    · rw [h1] at hd ⊢
+      simp only [Int.pow_zero, Int.mul_one, Int.ediv_one] at hd ⊢
+      omega
+    · obtain ⟨j, hj⟩ : ∃ j, 3 * (n - 1) = 3 + j := ⟨3 * (n - 1) - 3, by omega⟩
+      rw [hj, Int.pow_add]
+      generalize (2 : Int) ^ j = p
+      have e : s - d * ((2 : Int) ^ 3 * p) + t * ((2 : Int) ^ 3 * p) = s + 8 * ((t - d) * p) := by
+        rw [Int.sub_mul, Int.mul_sub]
+        simp only [Int.reducePow]
+        rw [Int.mul_left_comm 8, Int.mul_left_comm 8, Int.mul_left_comm d 8,
+          Int.mul_left_comm t 8]
+        omega
+      rw [e, Int.add_mul_emod_self_left]
+      exact ht
+  rw [hx, Int.sub_mul, Int.mul_sub, Int.mul_sub]
+  omega
+
+/-- The ten entries of a shallow stack, `d0` on top. -/
+theorem digits10 (s : Int) (h0 : 0 ≤ s) (h1 : s < 2 ^ 30) :
+    ∃ d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 : Int,
+      (0 ≤ d0 ∧ d0 < 8) ∧ (0 ≤ d1 ∧ d1 < 8) ∧ (0 ≤ d2 ∧ d2 < 8) ∧ (0 ≤ d3 ∧ d3 < 8) ∧
+      (0 ≤ d4 ∧ d4 < 8) ∧ (0 ≤ d5 ∧ d5 < 8) ∧ (0 ≤ d6 ∧ d6 < 8) ∧ (0 ≤ d7 ∧ d7 < 8) ∧
+      (0 ≤ d8 ∧ d8 < 8) ∧ (0 ≤ d9 ∧ d9 < 8) ∧
+      s = d0 + 8 * d1 + 64 * d2 + 512 * d3 + 4096 * d4 + 32768 * d5 + 262144 * d6 +
+        2097152 * d7 + 16777216 * d8 + 134217728 * d9 := by
+  refine ⟨s % 8, s / 8 % 8, s / 64 % 8, s / 512 % 8, s / 4096 % 8, s / 32768 % 8,
+    s / 262144 % 8, s / 2097152 % 8, s / 16777216 % 8, s / 134217728 % 8, ?_⟩
+  simp only [Int.reducePow] at h1
+  omega
+
+set_option maxHeartbeats 4000000 in
 theorem stackSwapShallow_proven : StackSwapShallow := by
-  intro s n h0 h1
-  have key : stackSwap s n = Int.fmod (stackSwap64 s n) ((2 : Int) ^ 32) := rfl
-  rw [key, Int.fmod_eq_emod_of_nonneg _ (by decide)]
-  exact Int.emod_eq_of_lt h0 h1
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro m _ _
+    rw [peek_eq]; simp [EMPTY_STACK]
+  · intro s k m h0 h1 hk hm _
+    have hpush : pushValue s k = s * 8 + k := by
+      unfold pushValue asU64 WILL_OVERFLOW
+      rw [ite_eq_right (by omega)]
+    rw [hpush, peek_eq, peek_eq, peek_eq]
+    refine ⟨by omega, ?_, ?_⟩
+    · simp only [Nat.sub_self, Nat.mul_zero, Int.pow_zero, Int.ediv_one]; omega
+    · have e : 3 * (m + 1 - 1) = 3 + 3 * (m - 1) := by omega
+      rw [e, Int.pow_add, ← Int.ediv_ediv_of_nonneg (by decide)]
+      have : (s * 8 + (k : Int)) / (2 : Int) ^ 3 = s := by omega
+      rw [this]
+  · intro s
+    rw [peek_eq]
+    simp only [topOfStack, Int.fmod_eq_emod_of_nonneg _ (show (0 : Int) ≤ 8 by decide),
+      Nat.sub_self, Nat.mul_zero, Int.pow_zero, Int.ediv_one]
+  · intro s n m h0 h1 hn hn' hm _
+    have hN : n = 1 ∨ n = 2 ∨ n = 3 ∨ n = 4 ∨ n = 5 ∨ n = 6 ∨ n = 7 ∨ n = 8 ∨ n = 9 ∨ n = 10 := by
+      omega
+    obtain ⟨d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, hs⟩ :=
+      digits10 s h0 h1
+    -- entry `i + 1` of `s`, counted from the top, is `d i`
+    have q0 : s % 8 = d0 := by subst hs; omega
+    have q1 : s / 8 % 8 = d1 := by subst hs; omega
+    have q2 : s / 64 % 8 = d2 := by subst hs; omega
+    have q3 : s / 512 % 8 = d3 := by subst hs; omega
+    have q4 : s / 4096 % 8 = d4 := by subst hs; omega
+    have q5 : s / 32768 % 8 = d5 := by subst hs; omega
+    have q6 : s / 262144 % 8 = d6 := by subst hs; omega
+    have q7 : s / 2097152 % 8 = d7 := by subst hs; omega
+    have q8 : s / 16777216 % 8 = d8 := by subst hs; omega
+    have q9 : s / 134217728 % 8 = d9 := by subst hs; omega
+    -- the swapped stack still has at most ten entries, so the narrowing on return keeps it
+    have hfit : 0 ≤ stackSwap64 s n ∧ stackSwap64 s n < 2 ^ 30 := by
+      rw [stackSwap64_eq s n]
+      rcases hN with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+        simp only [Nat.reduceSub, Nat.reduceMul, Int.reducePow, Int.pow_zero, Int.ediv_one,
+          Int.reduceSub, q0, q1, q2, q3, q4, q5, q6, q7, q8, q9] <;> omega
+    have hnarrow : stackSwap s n = stackSwap64 s n := by
+      have key : stackSwap s n = Int.fmod (stackSwap64 s n) ((2 : Int) ^ 32) := rfl
+      rw [key, Int.fmod_eq_emod_of_nonneg _ (by decide)]
+      exact Int.emod_eq_of_lt hfit.1 (Int.lt_trans hfit.2 (by decide))
+    rw [hnarrow]
+    by_cases hm' : 11 ≤ m
+    · rw [peek_deep _ m hfit.1 hfit.2 hm', ite_eq_right (by omega), ite_eq_right (by omega),
+        peek_deep _ m h0 h1 hm']
+    · have hM : m = 1 ∨ m = 2 ∨ m = 3 ∨ m = 4 ∨ m = 5 ∨ m = 6 ∨ m = 7 ∨ m = 8 ∨ m = 9 ∨ m = 10 := by
+        omega
+      clear hfit hnarrow h0 h1
+      rw [stackSwap64_eq s n]
+      simp only [peek_eq]
+      rcases hN with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+        rcases hM with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+        simp only [Nat.reduceSub, Nat.reduceMul, Int.reducePow, Int.pow_zero, Int.ediv_one,
+          Int.reduceSub, Nat.reduceEqDiff, reduceIte, q0, q1, q2, q3, q4, q5, q6, q7, q8, q9] <;>
+        clear q0 q1 q2 q3 q4 q5 q6 q7 q8 q9 <;> subst hs <;> refine congrArg Int.toNat ?_ <;> omega
+  · intro s n h0 h1
+    have key : stackSwap s n = Int.fmod (stackSwap64 s n) ((2 : Int) ^ 32) := rfl
+    rw [key, Int.fmod_eq_emod_of_nonneg _ (by decide)]
+    exact Int.emod_eq_of_lt h0 h1
 
 /-- `OVERFLOWED` survives a `SWAP`. False: the narrowing turns `-1` into a positive
 stack of invalid kinds, and "stack is too deep to analyze" is lost. -/

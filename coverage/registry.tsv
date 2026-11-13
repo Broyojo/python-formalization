@@ -2640,7 +2640,7 @@ bytecode-push-exc-info	proven	Python/bytecodes.c	opcode:PUSH_EXC_INFO
 bytecode-raise-varargs	proven	Python/bytecodes.c	opcode:RAISE_VARARGS
 bytecode-create-init-frame	proven	Python/bytecodes.c	opcode:_CREATE_INIT_FRAME
 bytecode-end-for	proven	Python/bytecodes.c	opcode:END_FOR
-bytecode-frame-swap-shallow	proven	Objects/frameobject.c	stack_swap,peek
+bytecode-frame-swap-shallow	proven	Objects/frameobject.c	stack_swap,peek,push_value,top_of_stack
 bytecode-frame-first-line	proven	Objects/frameobject.c	first_line_not_before,marklines
 bytecode-iter-setstate	open	Objects/iterobject.c	iter_setstate
 bytecode-iter-len-reduce	open	Objects/iterobject.c	iter_len,iter_reduce
