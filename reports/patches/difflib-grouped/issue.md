@@ -39,3 +39,6 @@ Expected (what `get_opcodes()` returns before the `get_grouped_opcodes()` call):
 ### Operating systems tested on:
 
 Linux
+
+---
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude) helped investigate the findings and prepare this report. The examples were rerun on CPython 3.15.2 and main, and the report received technical review. Record: [textlibs-difflib-grouped-opcodes-mutates-cache](https://github.com/Broyojo/python-formalization/blob/main/bugs/textlibs-difflib-grouped-opcodes-mutates-cache.yaml)

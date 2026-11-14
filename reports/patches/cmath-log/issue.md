@@ -21,3 +21,6 @@ Expected: `cmath.log(0, base)` raises `ValueError: math domain error`, the same 
 ### Operating systems tested on:
 
 Linux
+
+---
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude) helped investigate the findings and prepare this report. The examples were rerun on CPython 3.15.2 and main, and the report received technical review. Record: [mathint-cmath-log-base-errno](https://github.com/Broyojo/python-formalization/blob/main/bugs/mathint-cmath-log-base-errno.yaml)

@@ -28,3 +28,6 @@ Expected: `baa` printed twice. (Conversely, `UserString('aaa').replace('a', 'b',
 ### Operating systems tested on:
 
 Linux
+
+---
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude) helped investigate the findings and prepare this report. The examples were rerun on CPython 3.15.2 and main, and the report received technical review. Record: [corelibs-userstring-replace-count-keyword](https://github.com/Broyojo/python-formalization/blob/main/bugs/corelibs-userstring-replace-count-keyword.yaml)
