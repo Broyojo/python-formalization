@@ -31,6 +31,3 @@ The cause is in `_get_ptext_to_endchars`: when `value` starts with whitespace, t
 ### Operating systems tested on:
 
 Linux
-
----
-AI tools (Claude) helped find this and prepare the fix; I reviewed and tested it.

@@ -39,6 +39,3 @@ Expected (what `get_opcodes()` returns before the `get_grouped_opcodes()` call):
 ### Operating systems tested on:
 
 Linux
-
----
-AI tools (Claude) helped find this and prepare the fix; I reviewed and tested it.

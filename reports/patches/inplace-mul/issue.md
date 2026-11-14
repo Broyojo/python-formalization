@@ -33,6 +33,3 @@ The cause is in `PyNumber_InPlaceMultiply` (Objects/abstract.c): the right opera
 ### Operating systems tested on:
 
 Linux
-
----
-AI tools (Claude) helped find this and prepare the fix; I reviewed and tested it.

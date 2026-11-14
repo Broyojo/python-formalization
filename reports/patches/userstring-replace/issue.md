@@ -28,6 +28,3 @@ Expected: `baa` printed twice. (Conversely, `UserString('aaa').replace('a', 'b',
 ### Operating systems tested on:
 
 Linux
-
----
-AI tools (Claude) helped find this and prepare the fix; I reviewed and tested it.

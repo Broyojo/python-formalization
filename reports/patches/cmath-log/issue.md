@@ -21,6 +21,3 @@ Expected: `cmath.log(0, base)` raises `ValueError: math domain error`, the same 
 ### Operating systems tested on:
 
 Linux
-
----
-AI tools (Claude) helped find this and prepare the fix; I reviewed and tested it.
