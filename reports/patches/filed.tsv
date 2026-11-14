@@ -1,0 +1,5 @@
+email-msgid	161966	https://github.com/python/cpython/issues/161966	https://github.com/python/cpython/pull/161967
+inplace-mul	161968	https://github.com/python/cpython/issues/161968	https://github.com/python/cpython/pull/161969
+userstring-replace	161970	https://github.com/python/cpython/issues/161970	https://github.com/python/cpython/pull/161971
+cmath-log	161972	https://github.com/python/cpython/issues/161972	PENDING: branch Broyojo:gh-161972-cmath-log-base-errno ready; blocked by open-PR limit
+difflib-grouped	161973	https://github.com/python/cpython/issues/161973	PENDING: branch Broyojo:gh-161973-difflib-grouped-opcodes ready; blocked by open-PR limit
