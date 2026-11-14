@@ -12,9 +12,9 @@ Held for later rounds: the 34 drafts marked `[~]` in reports/drafts/INDEX.md, pe
 ## Second batch, 2026-11-13 (issue + fix PR pairs)
 
 - gh-161966 / PR #161967: email Message-ID domain literal starting with whitespace
-- gh-161968 / PR #161969: `x *= seq` for int subclasses and IntEnum
+- gh-161968 / PR #161969: `x *= seq` for int subclasses and IntEnum (MERGED 2026-11-14, backported to 3.14 and 3.15)
 - gh-161970 / PR #161971: UserString.replace() count keyword
-- gh-161972: cmath.log(0, base); PR branch ready, not opened
-- gh-161973: difflib get_grouped_opcodes cache; PR branch ready, not opened
+- gh-161972: cmath.log(0, base); handed to tanveer-arch, who asked to fix it (a core dev suggested fixing c_log instead)
+- gh-161973 / PR #162012: difflib get_grouped_opcodes cache
 
 python/cpython limits open PRs per contributor (3 for this account): the last two open when one of the first three is merged or closed. Details in reports/patches/filed.tsv.
