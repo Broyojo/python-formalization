@@ -1,0 +1,181 @@
+From 5bc1249d043c0b22ec9f92dbc0023d7d3ccc7a10 Mon Sep 17 00:00:00 2001
+From: Broyojo <dha@xoba.com>
+Date: Sat, 14 Nov 2026 17:45:52 +0000
+Subject: [PATCH] gh-161970: Deprecate UserString.replace() maxsplit keyword
+ instead of removing it
+
+Keep accepting the old keyword name for a deprecation period instead of
+breaking callers that pass maxsplit= (typeshed spells the parameter
+maxsplit). Passing maxsplit= now emits a DeprecationWarning and is slated
+for removal in Python 3.18; passing both count and maxsplit raises
+TypeError. This mirrors the deprecation of the 'string' keyword parameter
+in hashlib (gh-134978), with a two-year period.
+---
+ Doc/deprecations/pending-removal-in-3.18.rst  |  7 ++++
+ Doc/library/collections.rst                   |  6 ++++
+ Doc/whatsnew/3.16.rst                         |  9 ++++++
+ Lib/collections/__init__.py                   | 20 +++++++++++-
+ Lib/test/test_userstring.py                   | 32 +++++++++++++++++++
+ ...-11-13-00-00-00.gh-issue-161970.Kq3vRw.rst |  4 ++-
+ 6 files changed, 76 insertions(+), 2 deletions(-)
+
+diff --git a/Doc/deprecations/pending-removal-in-3.18.rst b/Doc/deprecations/pending-removal-in-3.18.rst
+index fb10420..8c2f9b7 100644
+--- a/Doc/deprecations/pending-removal-in-3.18.rst
++++ b/Doc/deprecations/pending-removal-in-3.18.rst
+@@ -4,6 +4,13 @@ Pending removal in Python 3.18
+ * No longer accept a boolean value when a file descriptor is expected.
+   (Contributed by Serhiy Storchaka in :gh:`82626`.)
+ 
++* :mod:`collections`:
++
++  * The undocumented ``maxsplit`` keyword parameter of
++    :meth:`!collections.UserString.replace` has been deprecated since
++    Python 3.16. Pass the count as a positional argument or use the
++    ``count`` keyword parameter instead.
++
+ * :mod:`decimal`:
+ 
+   * The non-standard and undocumented :class:`~decimal.Decimal` format
+diff --git a/Doc/library/collections.rst b/Doc/library/collections.rst
+index 40f780c..ba54ffb 100644
+--- a/Doc/library/collections.rst
++++ b/Doc/library/collections.rst
+@@ -1438,3 +1438,9 @@ attribute.
+     .. versionchanged:: 3.5
+        New methods ``__getnewargs__``, ``__rmod__``, ``casefold``,
+        ``format_map``, ``isprintable``, and ``maketrans``.
++
++    .. deprecated-removed:: 3.16 3.18
++       The third parameter of :meth:`!replace` is now named *count*, as in
++       :meth:`str.replace`, and the undocumented ``maxsplit`` keyword
++       parameter is deprecated. Prefer passing the count as a positional
++       argument for maximum backwards compatibility.
+diff --git a/Doc/whatsnew/3.16.rst b/Doc/whatsnew/3.16.rst
+index f86a6ec..e6dee90 100644
+--- a/Doc/whatsnew/3.16.rst
++++ b/Doc/whatsnew/3.16.rst
+@@ -1329,6 +1329,15 @@ New deprecations
+ 
+     (Contributed by Stan Ulbrych in :gh:`159240`.)
+ 
++* :mod:`collections`:
++
++  * The third parameter of :meth:`!collections.UserString.replace` is now
++    named *count*, as in :meth:`str.replace`. Support for the undocumented
++    ``maxsplit`` keyword parameter is now deprecated and slated for removal
++    in Python 3.18. Prefer passing the count as a positional argument for
++    maximum backwards compatibility.
++    (Contributed by Broyojo in :gh:`161970`.)
++
+ * :mod:`functools`:
+ 
+   * Using a return annotation to infer the dispatch type for
+diff --git a/Lib/collections/__init__.py b/Lib/collections/__init__.py
+index c291dbd..84028ac 100644
+--- a/Lib/collections/__init__.py
++++ b/Lib/collections/__init__.py
+@@ -1414,6 +1414,9 @@ def extend(self, other):
+ ### UserString
+ ################################################################################
+ 
++_MISSING = sentinel("MISSING")
++
++
+ class UserString(_collections_abc.Sequence):
+ 
+     def __init__(self, seq):
+@@ -1611,7 +1614,22 @@ def lstrip(self, chars=None):
+     def partition(self, sep):
+         return self.data.partition(sep)
+ 
+-    def replace(self, old, new, count=-1):
++    # The 'maxsplit' keyword parameter can be removed in Python 3.18.
++    def replace(self, old, new, count=-1, *, maxsplit=_MISSING):
++        if maxsplit is not _MISSING:
++            if count != -1:
++                raise TypeError("'count' and 'maxsplit' are mutually exclusive "
++                                "and support for 'maxsplit' keyword parameter "
++                                "is slated for removal in Python 3.18")
++            import warnings
++            warnings._deprecated(
++                "maxsplit",
++                message="the {name!r} keyword parameter is deprecated since "
++                        "Python 3.16 and slated for removal in Python {remove}; "
++                        "use the 'count' keyword parameter or pass the count "
++                        "as a positional argument instead",
++                remove=(3, 18))
++            count = maxsplit
+         if isinstance(old, UserString):
+             old = old.data
+         if isinstance(new, UserString):
+diff --git a/Lib/test/test_userstring.py b/Lib/test/test_userstring.py
+index 1ba5b66..86276bb 100644
+--- a/Lib/test/test_userstring.py
++++ b/Lib/test/test_userstring.py
+@@ -1,6 +1,7 @@
+ # UserString is a wrapper around the native builtin string type.
+ # UserString instances should behave similar to builtin string objects.
+ 
++import re
+ import unittest
+ from test import string_tests
+ from test import support
+@@ -8,6 +9,14 @@
+ from collections import UserString
+ 
+ 
++DEPRECATED_MAXSPLIT_PARAMETER = re.escape(
++    "the 'maxsplit' keyword parameter is deprecated since "
++    "Python 3.16 and slated for removal in Python 3.18; "
++    "use the 'count' keyword parameter or pass the count "
++    "as a positional argument instead"
++)
++
++
+ class UserStringSubclass(UserString):
+     pass
+ 
+@@ -187,6 +196,29 @@ def test_implementation(self):
+         self.assertEqual(i, 5)
+         self.assertEqual(i2, 5)
+ 
++    def test_replace_count(self):
++        s = UserString('aaa')
++        self.assertEqual(s.replace('a', 'b', 2), 'bba')
++        self.assertEqual(s.replace('a', 'b', count=2), 'bba')
++        self.assertEqual(s.replace(UserString('a'), UserString('b'), count=1),
++                         'baa')
++
++    def test_replace_maxsplit_deprecated(self):
++        # gh-161970: the third parameter was misnamed 'maxsplit'.
++        s = UserStringSubclass('aaa')
++        with self.assertWarnsRegex(DeprecationWarning,
++                                   DEPRECATED_MAXSPLIT_PARAMETER) as cm:
++            r = s.replace('a', 'b', maxsplit=2)
++        self.assertEqual(cm.filename, __file__)
++        self.assertEqual(r, 'bba')
++        self.assertIs(type(r), UserStringSubclass)
++
++        msg = "'count' and 'maxsplit' are mutually exclusive"
++        with self.assertRaisesRegex(TypeError, msg):
++            s.replace('a', 'b', 1, maxsplit=2)
++        with self.assertRaisesRegex(TypeError, msg):
++            s.replace('a', 'b', count=1, maxsplit=2)
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-161970.Kq3vRw.rst b/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-161970.Kq3vRw.rst
+index d72b523..b06c2d7 100644
+--- a/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-161970.Kq3vRw.rst
++++ b/Misc/NEWS.d/next/Library/2026-11-13-00-00-00.gh-issue-161970.Kq3vRw.rst
+@@ -1,2 +1,4 @@
+-Rename the *maxsplit* parameter of :meth:`!collections.UserString.replace` to
++The third parameter of :meth:`!collections.UserString.replace` is now named
+ *count*, matching :meth:`str.replace`, so that it can be passed as a keyword.
++Support for the undocumented ``maxsplit`` keyword parameter is deprecated and
++slated for removal in Python 3.18.
+-- 
+2.34.1
+

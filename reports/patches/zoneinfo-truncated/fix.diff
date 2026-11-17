@@ -1,0 +1,109 @@
+diff --git a/Lib/test/test_zoneinfo/test_zoneinfo.py b/Lib/test/test_zoneinfo/test_zoneinfo.py
+index 6656d7c..78bc4d9 100644
+--- a/Lib/test/test_zoneinfo/test_zoneinfo.py
++++ b/Lib/test/test_zoneinfo/test_zoneinfo.py
+@@ -823,6 +823,36 @@ def test_abbreviation_index_above_127(self):
+         self.assertEqual(dt.tzname(), "ABC")
+         self.assertEqual(dt.utcoffset(), ONE_H)
+ 
++    def test_truncated_or_malformed_file(self):
++        def header(version, timecnt=0):
++            # One local time type with a 4-byte abbreviation block
++            return (b"TZif" + version + b"\x00" * 15
++                    + struct.pack(">6l", 0, 0, 0, timecnt, 1, 4))
++
++        utc = struct.pack(">lbB", 0, 0, 0) + b"UTC\x00"
++        v2 = header(b"2") + utc + header(b"2") + utc
++        bad_zones = [
++            # Truncated header
++            b"TZif2" + b"\x00" * 15,
++            b"TZif2" + b"\x00" * 38,
++            # Truncated transition times, transition indices or types
++            header(b"\x00", timecnt=2) + b"\x00" * 7,
++            header(b"\x00", timecnt=2) + b"\x00" * 9,
++            header(b"\x00") + b"\x00" * 5,
++            # Footer does not start with a newline
++            v2 + b"UTC0\n",
++            v2,
++        ]
++
++        for bad_zone in bad_zones:
++            with self.subTest(bad_zone=bad_zone):
++                with self.assertRaises(ValueError):
++                    self.klass.from_file(io.BytesIO(bad_zone))
++
++        # The same data with a valid footer is accepted
++        zi = self.klass.from_file(io.BytesIO(v2 + b"\nUTC0\n"))
++        self.assertEqual(datetime(2026, 1, 1, tzinfo=zi).tzname(), "UTC")
++
+     def test_transition_lookahead_out_of_bounds(self):
+         STD = ZoneOffset("STD", ZERO)
+         DST = ZoneOffset("DST", ONE_H, ONE_H)
+diff --git a/Lib/zoneinfo/_common.py b/Lib/zoneinfo/_common.py
+index 071ca71..255bf73 100644
+--- a/Lib/zoneinfo/_common.py
++++ b/Lib/zoneinfo/_common.py
+@@ -64,9 +64,9 @@ def load_data(fobj):
+     # The data portion starts with timecnt transitions and indices
+     if timecnt:
+         trans_list_utc = struct.unpack(
+-            f">{timecnt}{time_type}", fobj.read(timecnt * time_size)
++            f">{timecnt}{time_type}", _read_exact(fobj, timecnt * time_size)
+         )
+-        trans_idx = struct.unpack(f">{timecnt}B", fobj.read(timecnt))
++        trans_idx = struct.unpack(f">{timecnt}B", _read_exact(fobj, timecnt))
+ 
+         if max(trans_idx) >= typecnt:
+             raise ValueError("Invalid transition index found while reading TZif: "
+@@ -78,7 +78,7 @@ def load_data(fobj):
+     # Read the ttinfo struct, (utoff, isdst, abbrind)
+     if typecnt:
+         utcoff, isdst, abbrind = zip(
+-            *(struct.unpack(">lbB", fobj.read(6)) for i in range(typecnt))
++            *(struct.unpack(">lbB", _read_exact(fobj, 6)) for i in range(typecnt))
+         )
+     else:
+         utcoff = ()
+@@ -127,8 +127,8 @@ def get_abbr(idx):
+         skip_bytes = header.isutcnt + header.isstdcnt + header.leapcnt * 12
+         fobj.seek(skip_bytes, 1)
+ 
+-        c = fobj.read(1)  # Should be \n
+-        assert c == b"\n", c
++        if fobj.read(1) != b"\n":
++            raise ValueError("Invalid TZif file: footer must start with a newline")
+ 
+         line = fobj.readline()
+         if not line.endswith(b"\n"):
+@@ -140,6 +140,13 @@ def get_abbr(idx):
+     return trans_idx, trans_list_utc, utcoff, isdst, abbr, tz_str
+ 
+ 
++def _read_exact(fobj, size):
++    data = fobj.read(size)
++    if len(data) != size:
++        raise ValueError("Invalid TZif file: unexpected end of file")
++    return data
++
++
+ class _TZifHeader:
+     __slots__ = [
+         "version",
+@@ -171,7 +178,7 @@ def from_file(cls, stream):
+         args = (version,)
+ 
+         # Slots are defined in the order that the bytes are arranged
+-        args = args + struct.unpack(">6l", stream.read(24))
++        args = args + struct.unpack(">6l", _read_exact(stream, 24))
+ 
+         return cls(*args)
+ 
+diff --git a/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.KdLb1R.rst b/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.KdLb1R.rst
+new file mode 100644
+index 0000000..9de7c9f
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.KdLb1R.rst
+@@ -0,0 +1,3 @@
++:meth:`zoneinfo.ZoneInfo.from_file` now raises :exc:`ValueError` instead of
++:exc:`struct.error` or :exc:`AssertionError` for truncated TZif data or a
++footer that does not start with a newline.

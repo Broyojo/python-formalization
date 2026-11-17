@@ -1,0 +1,52 @@
+diff --git a/Lib/test/test_array.py b/Lib/test/test_array.py
+index 5809665..7d4508a 100755
+--- a/Lib/test/test_array.py
++++ b/Lib/test/test_array.py
+@@ -1316,6 +1316,23 @@ def test_unicode(self):
+ 
+         self.assertRaises(TypeError, a.fromunicode)
+ 
++    def test_fromunicode_empty(self):
++        # gh-XXXXXX: an empty string on an array without a buffer
++        a = array.array(self.typecode)
++        a.fromunicode('')
++        self.assertEqual(a, array.array(self.typecode))
++        a.fromunicode('abc')
++        a.fromunicode('')
++        self.assertEqual(a.tounicode(), 'abc')
++
++        # A large deletion frees the buffer.
++        a = array.array(self.typecode, 'x' * 100)
++        del a[:]
++        a.fromunicode('')
++        self.assertEqual(len(a), 0)
++        a.fromunicode('\u1234')
++        self.assertEqual(a.tounicode(), '\u1234')
++
+ 
+ class NumberTest(BaseTest):
+ 
+diff --git a/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.gFPIGA.rst b/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.gFPIGA.rst
+new file mode 100644
+index 0000000..e183236
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.gFPIGA.rst
+@@ -0,0 +1,2 @@
++Fix :meth:`array.array.fromunicode` raising :exc:`SystemError` when called
++with an empty string on an empty ``'w'`` array.
+diff --git a/Modules/arraymodule.c b/Modules/arraymodule.c
+index 64dacd1..c3f7036 100644
+--- a/Modules/arraymodule.c
++++ b/Modules/arraymodule.c
+@@ -1979,6 +1979,11 @@ array_array_fromunicode_impl(arrayobject *self, PyObject *ustr)
+     if (new_size < 0 || (size_t)new_size > PY_SSIZE_T_MAX / sizeof(Py_UCS4)) {
+         return PyErr_NoMemory();
+     }
++    if (ustr_length == 0) {
++        /* Nothing to copy, and ob_item may be NULL, which
++           PyUnicode_AsUCS4() rejects. */
++        Py_RETURN_NONE;
++    }
+     if (array_resize(self, new_size) == -1) {
+         return NULL;
+     }

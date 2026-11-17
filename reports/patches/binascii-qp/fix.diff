@@ -1,0 +1,201 @@
+diff --git a/Lib/quopri.py b/Lib/quopri.py
+index bab7067..bcc20d0 100644
+--- a/Lib/quopri.py
++++ b/Lib/quopri.py
+@@ -92,6 +92,13 @@ def write(s, output=output, lineEnd=b'\n'):
+             # length calculation!
+             write(thisline[:MAXLINESIZE-1], lineEnd=b'=\n')
+             thisline = thisline[MAXLINESIZE-1:]
++        # write() encodes a trailing space or tab as =20 or =09.  If that
++        # would make the line too long, put the whitespace on a line of
++        # its own.  What stays before the soft line break is not at the end
++        # of a line, so it is written as is, like binascii.b2a_qp() does.
++        if thisline[-1:] in b' \t' and len(thisline) + 2 > MAXLINESIZE:
++            output.write(thisline[:-1] + b'=\n')
++            thisline = thisline[-1:]
+         # Write out the current line
+         prevline = thisline
+     # Write out the last line, without a trailing newline
+diff --git a/Lib/test/test_binascii.py b/Lib/test/test_binascii.py
+index 77ea77e..fe54c2f 100644
+--- a/Lib/test/test_binascii.py
++++ b/Lib/test/test_binascii.py
+@@ -1521,6 +1521,59 @@ def test_qp(self):
+         self.assertEqual(b2a_qp(type2test(b'a.\n')), b'a.\n')
+         self.assertEqual(b2a_qp(type2test(b'.a')[:-1]), b'=2E')
+ 
++    def test_b2a_qp_whitespace_before_line_break(self):
++        # Whitespace before a line break is encoded as =20 or =09.
++        # This must not make the line longer than 76 characters.
++        b2a_qp = binascii.b2a_qp
++        def check(data, expected, header=False, istext=True):
++            encoded = b2a_qp(self.type2test(data),
++                             header=header, istext=istext)
++            self.assertEqual(encoded, expected)
++            self.assertLessEqual(max(map(len, encoded.splitlines())), 76)
++            self.assertEqual(binascii.a2b_qp(encoded, header=header), data)
++
++        check(b'a'*73 + b' \n', b'a'*73 + b'=20\n')
++        check(b'a'*74 + b' \n', b'a'*74 + b'=\n=20\n')
++        check(b'a'*75 + b' \n', b'a'*75 + b'=\n=20\n')
++        check(b'a'*75 + b'\t\n', b'a'*75 + b'=\n=09\n')
++        check(b'a'*73 + b'  \n', b'a'*73 + b' =\n=20\n')
++        check(b'a'*74 + b' \nb', b'a'*74 + b'=\n=20\nb')
++        check(b'a'*74 + b' \r\n', b'a'*74 + b'=\r\n=20\r\n')
++        check(b'a'*75 + b'\t\n', b'a'*75 + b'=\n=09\n', header=True)
++        # In header mode a space is written as '_', which fits.
++        check(b'a'*75 + b' \n', b'a'*75 + b'_\n', header=True)
++        # Without istext the line break is encoded, so the space stays.
++        check(b'a'*74 + b' \n', b'a'*74 + b' =\n=0A', istext=False)
++        for n in range(70, 160):
++            for ws in b' ', b'\t':
++                for eol in b'\n', b'\r\n':
++                    with self.subTest(n=n, ws=ws, eol=eol):
++                        data = b'a'*n + ws + eol
++                        encoded = b2a_qp(self.type2test(data))
++                        lengths = list(map(len, encoded.splitlines()))
++                        self.assertLessEqual(max(lengths), 76)
++                        self.assertEqual(binascii.a2b_qp(encoded), data)
++
++    def test_b2a_qp_binary_line_length(self):
++        # With istext=False a line break in the data is encoded as =0A,
++        # so the character before it must still leave room for the soft
++        # line break.
++        b2a_qp = binascii.b2a_qp
++        type2test = self.type2test
++        self.assertEqual(b2a_qp(type2test(b'a'*75 + b'\n'), istext=False),
++                         b'a'*75 + b'=\n=0A')
++        self.assertEqual(b2a_qp(type2test(b'a'*76 + b'\n'), istext=False),
++                         b'a'*75 + b'=\na=0A')
++        self.assertEqual(b2a_qp(type2test(b'a'*76 + b'\nb'), istext=False),
++                         b'a'*75 + b'=\na=0Ab')
++        for n in range(70, 160):
++            for data in b'a'*n + b'\n', b'a'*n + b'\nb', b'a'*n + b'\r\n':
++                with self.subTest(data=data):
++                    encoded = b2a_qp(self.type2test(data), istext=False)
++                    lengths = list(map(len, encoded.splitlines()))
++                    self.assertLessEqual(max(lengths), 76)
++                    self.assertEqual(binascii.a2b_qp(encoded), data)
++
+     @hypothesis.given(
+         binary=hypothesis.strategies.binary(),
+         quotetabs=hypothesis.strategies.booleans(),
+diff --git a/Lib/test/test_quopri.py b/Lib/test/test_quopri.py
+index 2e013e9..3f9a969 100644
+--- a/Lib/test/test_quopri.py
++++ b/Lib/test/test_quopri.py
+@@ -197,6 +197,40 @@ def test_decode_soft_line_break(self):
+         self.assertEqual(quopri.decodestring(b"foo=\r\nbar"), b"foobar")
+         self.assertEqual(quopri.decodestring(b"foo\r\nbar"), b"foo\r\nbar")
+ 
++    @withpythonimplementation
++    def test_encode_whitespace_before_line_break(self):
++        # Trailing whitespace is encoded as =20 or =09.  This must not
++        # make the line longer than 76 characters.
++        cases = [
++            (b'a'*73 + b' \n', b'a'*73 + b'=20\n'),
++            (b'a'*74 + b' \n', b'a'*74 + b'=\n=20\n'),
++            (b'a'*75 + b' \n', b'a'*75 + b'=\n=20\n'),
++            (b'a'*75 + b'\t\n', b'a'*75 + b'=\n=09\n'),
++            (b'a'*73 + b'  \n', b'a'*73 + b' =\n=20\n'),
++            (b'a'*74 + b' \nb', b'a'*74 + b'=\n=20\nb'),
++            (b'a'*150 + b' \n', b'a'*75 + b'=\n' + b'a'*75 + b'=\n=20\n'),
++            (b'a'*74 + b' ', b'a'*74 + b'=\n=20'),
++            (b'a'*75 + b' ', b'a'*75 + b'=\n=20'),
++        ]
++        for p, e in cases:
++            with self.subTest(p=p):
++                self.assertEqual(quopri.encodestring(p), e)
++                self.assertEqual(quopri.decodestring(e), p)
++        # In header mode a space is written as '_', which fits.
++        self.assertEqual(quopri.encodestring(b'a'*75 + b' \n', header=True),
++                         b'a'*75 + b'_\n')
++        self.assertEqual(quopri.encodestring(b'a'*75 + b'\t\n', header=True),
++                         b'a'*75 + b'=\n=09\n')
++        for n in range(70, 160):
++            for ws in b' ', b'\t':
++                for end in b'\n', b'':
++                    with self.subTest(n=n, ws=ws, end=end):
++                        p = b'a'*n + ws + end
++                        e = quopri.encodestring(p)
++                        lengths = list(map(len, e.splitlines()))
++                        self.assertLessEqual(max(lengths), 76)
++                        self.assertEqual(quopri.decodestring(e), p)
++
+     @withpythonimplementation
+     def test_encode_header(self):
+         for p, e in self.HSTRINGS:
+diff --git a/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.oUwubm.rst b/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.oUwubm.rst
+new file mode 100644
+index 0000000..63e0fcd
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2026-11-17-00-00-00.gh-issue-XXXXXX.oUwubm.rst
+@@ -0,0 +1,7 @@
++Fix :func:`binascii.b2a_qp` and :func:`quopri.encodestring` writing encoded
++lines longer than 76 characters when a space or tab comes just before a line
++break. A soft line break is now inserted before the whitespace, as was already
++done when the whitespace is at the end of the data. The pure-Python encoder in
++:mod:`quopri` gets the same fix. Also fix :func:`binascii.b2a_qp` with
++*istext* false writing a 77-character line when a newline in the data follows
++76 other characters.
+diff --git a/Modules/binascii.c b/Modules/binascii.c
+index 57684f8..b50b422 100644
+--- a/Modules/binascii.c
++++ b/Modules/binascii.c
+@@ -2509,6 +2509,22 @@ to_hex (unsigned char ch, unsigned char *s)
+     return 0;
+ }
+ 
++/* Return 1 if databuf[in] is a space or tab that b2a_qp copies as is
++ * and then, because a line break follows it, rewrites as =20 or =09. */
++static int
++qp_whitespace_before_eol(const unsigned char *databuf, Py_ssize_t in,
++                         Py_ssize_t datalen, int header)
++{
++    if (databuf[in] != '\t' && (databuf[in] != ' ' || header)) {
++        return 0;
++    }
++    if (in + 1 < datalen && databuf[in+1] == '\n') {
++        return 1;
++    }
++    return (in + 2 < datalen && databuf[in+1] == '\r' &&
++            databuf[in+2] == '\n');
++}
++
+ /* XXX: This is ridiculously complicated to be backward compatible
+  * (mostly) with the quopri module.  It doesn't re-create the quopri
+  * module bug where text ending in CRLF has the CR encoded */
+@@ -2601,9 +2617,14 @@ binascii_b2a_qp_impl(PyObject *module, Py_buffer *data, int quotetabs,
+                     in++;
+             }
+             else {
+-                if ((in + 1 != datalen) &&
+-                    (databuf[in+1] != '\n') &&
+-                    (linelen + 1) >= MAXLINESIZE) {
++                /* Whitespace before a line break ends up as =20 or =09,
++                 * so it needs three characters, not one. */
++                if (((in + 1 != datalen) &&
++                     (!istext || databuf[in+1] != '\n') &&
++                     (linelen + 1) >= MAXLINESIZE) ||
++                    (istext && (linelen + 3) > MAXLINESIZE &&
++                     qp_whitespace_before_eol(databuf, in, datalen, header)))
++                {
+                     linelen = 0;
+                     if (crlf)
+                         delta += 3;
+@@ -2679,9 +2700,12 @@ binascii_b2a_qp_impl(PyObject *module, Py_buffer *data, int quotetabs,
+                     in++;
+             }
+             else {
+-                if ((in + 1 != datalen) &&
+-                    (databuf[in+1] != '\n') &&
+-                    (linelen + 1) >= MAXLINESIZE) {
++                if (((in + 1 != datalen) &&
++                     (!istext || databuf[in+1] != '\n') &&
++                     (linelen + 1) >= MAXLINESIZE) ||
++                    (istext && (linelen + 3) > MAXLINESIZE &&
++                     qp_whitespace_before_eol(databuf, in, datalen, header)))
++                {
+                     odata[out++] = '=';
+                     if (crlf) odata[out++] = '\r';
+                     odata[out++] = '\n';

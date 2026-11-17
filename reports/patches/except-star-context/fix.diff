@@ -1,0 +1,119 @@
+diff --git a/Lib/test/test_except_star.py b/Lib/test/test_except_star.py
+index 9dd28b5..7ba4fa3 100644
+--- a/Lib/test/test_except_star.py
++++ b/Lib/test/test_except_star.py
+@@ -179,6 +179,8 @@ def assertMetadataEqual(self, e1, e2):
+         else:
+             self.assertEqual(e1.__context__, e2.__context__)
+             self.assertEqual(e1.__cause__, e2.__cause__)
++            self.assertEqual(e1.__suppress_context__,
++                             e2.__suppress_context__)
+             self.assertEqual(e1.__traceback__, e2.__traceback__)
+ 
+     def assertMetadataNotEqual(self, e1, e2):
+@@ -543,6 +545,41 @@ def test_reraise_partial_handle_some_unnamed(self):
+         self.assertExceptionIsLike(
+             exc, ExceptionGroup("eg", [TypeError(1), OSError(3)]))
+ 
++    def test_reraise_partial_handle_keeps_context(self):
++        # The unhandled part keeps the implicit __context__ of the
++        # group and does not suppress it.
++        try:
++            try:
++                raise ValueError("ctx")
++            except ValueError:
++                try:
++                    raise ExceptionGroup("eg", [TypeError(1), OSError(2)])
++                except* TypeError:
++                    pass
++        except ExceptionGroup as e:
++            exc = e
++
++        self.assertExceptionIsLike(exc, ExceptionGroup("eg", [OSError(2)]))
++        self.assertExceptionIsLike(exc.__context__, ValueError("ctx"))
++        self.assertFalse(exc.__suppress_context__)
++
++    def test_reraise_partial_handle_keeps_suppressed_context(self):
++        try:
++            try:
++                raise ValueError("ctx")
++            except ValueError:
++                try:
++                    raise ExceptionGroup(
++                        "eg", [TypeError(1), OSError(2)]) from None
++                except* TypeError:
++                    pass
++        except ExceptionGroup as e:
++            exc = e
++
++        self.assertExceptionIsLike(exc, ExceptionGroup("eg", [OSError(2)]))
++        self.assertExceptionIsLike(exc.__context__, ValueError("ctx"))
++        self.assertTrue(exc.__suppress_context__)
++
+     def test_reraise_plain_exception_named(self):
+         try:
+             try:
+diff --git a/Lib/test/test_exception_group.py b/Lib/test/test_exception_group.py
+index ec3b346..3eae6ce 100644
+--- a/Lib/test/test_exception_group.py
++++ b/Lib/test/test_exception_group.py
+@@ -720,6 +720,8 @@ def leaves(exc):
+                 self.assertEqual(eg.message, part.message)
+                 self.assertIs(eg.__cause__, part.__cause__)
+                 self.assertIs(eg.__context__, part.__context__)
++                self.assertIs(eg.__suppress_context__,
++                              part.__suppress_context__)
+                 self.assertIs(eg.__traceback__, part.__traceback__)
+                 self.assertEqual(
+                     getattr(eg, '__notes__', None),
+@@ -913,6 +915,24 @@ def test_split_does_not_copy_non_sequence_notes(self):
+         self.assertNotHasAttr(match, '__notes__')
+         self.assertNotHasAttr(rest, '__notes__')
+ 
++    def test_split_copies_suppress_context(self):
++        # The parts keep __suppress_context__ of the original group,
++        # like its __cause__ and __context__.
++        for has_cause in (False, True):
++            for suppress in (False, True):
++                with self.subTest(has_cause=has_cause, suppress=suppress):
++                    cause = OSError(3) if has_cause else None
++                    eg = ExceptionGroup("eg", [ValueError(1), TypeError(2)])
++                    eg.__context__ = KeyError(4)
++                    eg.__cause__ = cause
++                    eg.__suppress_context__ = suppress
++                    match, rest = eg.split(TypeError)
++                    sg = eg.subgroup(TypeError)
++                    for part in (match, rest, sg):
++                        self.assertIs(part.__cause__, cause)
++                        self.assertIs(part.__context__, eg.__context__)
++                        self.assertIs(part.__suppress_context__, suppress)
++
+     def test_drive_invalid_return_value(self):
+         class MyEg(ExceptionGroup):
+             def derive(self, excs):
+diff --git a/Misc/NEWS.d/next/Core_and_Builtins/2026-11-17-00-00-00.gh-issue-XXXXXX.tV-0C309.rst b/Misc/NEWS.d/next/Core_and_Builtins/2026-11-17-00-00-00.gh-issue-XXXXXX.tV-0C309.rst
+new file mode 100644
+index 0000000..80507a6
+--- /dev/null
++++ b/Misc/NEWS.d/next/Core_and_Builtins/2026-11-17-00-00-00.gh-issue-XXXXXX.tV-0C309.rst
+@@ -0,0 +1,5 @@
++The parts of an exception group made by :meth:`~BaseExceptionGroup.split`,
++:meth:`~BaseExceptionGroup.subgroup` and :keyword:`except* <except_star>` now
++keep the :attr:`~BaseException.__suppress_context__` value of the original
++group. Previously it was always set, which hid the group's implicit
++:attr:`~BaseException.__context__` in tracebacks.
+diff --git a/Objects/exceptions.c b/Objects/exceptions.c
+index dc0ba0d..298265e 100644
+--- a/Objects/exceptions.c
++++ b/Objects/exceptions.c
+@@ -1175,6 +1175,10 @@ exceptiongroup_subset(
+     }
+     PyException_SetContext(eg, PyException_GetContext(orig));
+     PyException_SetCause(eg, PyException_GetCause(orig));
++    /* PyException_SetCause() always sets suppress_context,
++     * so copy it from orig after setting the cause. */
++    PyBaseExceptionObject_CAST(eg)->suppress_context =
++        PyBaseExceptionObject_CAST(orig)->suppress_context;
+ 
+     PyObject *notes;
+     if (PyObject_GetOptionalAttr(orig, &_Py_ID(__notes__), &notes) < 0) {
