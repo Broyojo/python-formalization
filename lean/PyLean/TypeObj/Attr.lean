@@ -738,7 +738,7 @@ def isGenericGetattribute (w : World) (ga : Option Val) : Bool :=
   | some ga =>
     typeOf w ga == B.wrapperDescr &&
       (match payloadOf w ga with
-       | some (.wrapperDescr _ _ (.c .object)) => true
+       | some (.wrapperDescr _ b (.c .object)) => b.name == "__getattribute__"
        | _ => false)
 
 /-- `_Py_slot_tp_getattr_hook`, `Objects/typeobject.c:11091`. -/
