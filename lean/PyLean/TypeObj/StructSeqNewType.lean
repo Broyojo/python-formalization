@@ -195,8 +195,9 @@ theorem toCInt_wide : toCInt (40 + (((2 ^ 29 : Nat) : Int) - 0 - 1) * 8) = 32 :=
   unfold toCInt
   decide
 
-/-- `2^29` unnamed fields, none visible. -/
-def descWide : Desc := { name := lit "m.Wide", fields := List.replicate (2 ^ 29) .unnamed, nInSeq := 0 }
+/-- `2^29` unnamed fields, none visible. Noncomputable: only proofs use it, and a compiled
+definition would build the `2^29`-element list when any executable that imports this module starts. -/
+noncomputable def descWide : Desc := { name := lit "m.Wide", fields := List.replicate (2 ^ 29) .unnamed, nInSeq := 0 }
 
 theorem newTypeBasicsizeExact_refuted : ¬ NewTypeBasicsizeExact := by
   intro h
